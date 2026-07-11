@@ -112,7 +112,7 @@ export default async function PlayerProfilePage({
             <AvatarFallback className="text-lg">{player.name.slice(0, 2).toUpperCase()}</AvatarFallback>
           </Avatar>
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight">{player.name}</h1>
+            <h1 className="text-3xl font-bold tracking-tight">{player.name}</h1>
             {player.nickname && <p className="text-sm text-muted-foreground">&ldquo;{player.nickname}&rdquo;</p>}
           </div>
         </div>

@@ -45,7 +45,7 @@ export default async function StatisticsPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Statistics</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Statistics</h1>
         <p className="text-sm text-muted-foreground">Win/loss records across all game days.</p>
       </div>
 
