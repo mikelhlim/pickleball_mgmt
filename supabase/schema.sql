@@ -76,8 +76,20 @@ create index if not exists idx_game_days_venue on game_days (venue_id);
 
 -- ============================================================================
 -- Row Level Security
--- Single shared admin account: any authenticated user may read/write everything.
+-- Two tiers: any authenticated user may read everything (view access), but
+-- writes (insert/update/delete) require the admin role. A user's role lives
+-- in their JWT's app_metadata.role; missing/null defaults to admin, so
+-- accounts that existed before roles were introduced keep full access
+-- without needing a data migration.
 -- ============================================================================
+
+create or replace function public.is_admin()
+returns boolean
+language sql
+stable
+as $$
+  select coalesce(auth.jwt() -> 'app_metadata' ->> 'role', 'admin') = 'admin';
+$$;
 
 alter table players enable row level security;
 alter table venues enable row level security;
@@ -86,24 +98,44 @@ alter table game_day_players enable row level security;
 alter table matches enable row level security;
 
 drop policy if exists "authenticated full access" on players;
-create policy "authenticated full access" on players
-  for all using (auth.uid() is not null) with check (auth.uid() is not null);
+drop policy if exists "authenticated read" on players;
+drop policy if exists "admin write" on players;
+create policy "authenticated read" on players
+  for select using (auth.uid() is not null);
+create policy "admin write" on players
+  for all using (public.is_admin()) with check (public.is_admin());
 
 drop policy if exists "authenticated full access" on venues;
-create policy "authenticated full access" on venues
-  for all using (auth.uid() is not null) with check (auth.uid() is not null);
+drop policy if exists "authenticated read" on venues;
+drop policy if exists "admin write" on venues;
+create policy "authenticated read" on venues
+  for select using (auth.uid() is not null);
+create policy "admin write" on venues
+  for all using (public.is_admin()) with check (public.is_admin());
 
 drop policy if exists "authenticated full access" on game_days;
-create policy "authenticated full access" on game_days
-  for all using (auth.uid() is not null) with check (auth.uid() is not null);
+drop policy if exists "authenticated read" on game_days;
+drop policy if exists "admin write" on game_days;
+create policy "authenticated read" on game_days
+  for select using (auth.uid() is not null);
+create policy "admin write" on game_days
+  for all using (public.is_admin()) with check (public.is_admin());
 
 drop policy if exists "authenticated full access" on game_day_players;
-create policy "authenticated full access" on game_day_players
-  for all using (auth.uid() is not null) with check (auth.uid() is not null);
+drop policy if exists "authenticated read" on game_day_players;
+drop policy if exists "admin write" on game_day_players;
+create policy "authenticated read" on game_day_players
+  for select using (auth.uid() is not null);
+create policy "admin write" on game_day_players
+  for all using (public.is_admin()) with check (public.is_admin());
 
 drop policy if exists "authenticated full access" on matches;
-create policy "authenticated full access" on matches
-  for all using (auth.uid() is not null) with check (auth.uid() is not null);
+drop policy if exists "authenticated read" on matches;
+drop policy if exists "admin write" on matches;
+create policy "authenticated read" on matches
+  for select using (auth.uid() is not null);
+create policy "admin write" on matches
+  for all using (public.is_admin()) with check (public.is_admin());
 
 -- ============================================================================
 -- Statistics views
@@ -178,13 +210,16 @@ create policy "player photos public read" on storage.objects
   for select using (bucket_id = 'player-photos');
 
 drop policy if exists "player photos authenticated write" on storage.objects;
-create policy "player photos authenticated write" on storage.objects
-  for insert with check (bucket_id = 'player-photos' and auth.uid() is not null);
+drop policy if exists "player photos admin write" on storage.objects;
+create policy "player photos admin write" on storage.objects
+  for insert with check (bucket_id = 'player-photos' and public.is_admin());
 
 drop policy if exists "player photos authenticated update" on storage.objects;
-create policy "player photos authenticated update" on storage.objects
-  for update using (bucket_id = 'player-photos' and auth.uid() is not null);
+drop policy if exists "player photos admin update" on storage.objects;
+create policy "player photos admin update" on storage.objects
+  for update using (bucket_id = 'player-photos' and public.is_admin());
 
 drop policy if exists "player photos authenticated delete" on storage.objects;
-create policy "player photos authenticated delete" on storage.objects
-  for delete using (bucket_id = 'player-photos' and auth.uid() is not null);
+drop policy if exists "player photos admin delete" on storage.objects;
+create policy "player photos admin delete" on storage.objects
+  for delete using (bucket_id = 'player-photos' and public.is_admin());

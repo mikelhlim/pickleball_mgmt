@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { assertAdmin } from "@/lib/auth-role";
 
 const VenueSchema = z.object({
   name: z.string().trim().min(1, "Venue name is required."),
@@ -20,6 +21,12 @@ export async function createVenue(
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid input." };
 
   const supabase = await createClient();
+  try {
+    await assertAdmin(supabase);
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Not allowed." };
+  }
+
   const { data, error } = await supabase
     .from("venues")
     .insert({ name: parsed.data.name })
@@ -43,6 +50,12 @@ export async function updateVenue(
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid input." };
 
   const supabase = await createClient();
+  try {
+    await assertAdmin(supabase);
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Not allowed." };
+  }
+
   const { error } = await supabase.from("venues").update({ name: parsed.data.name }).eq("id", id);
   if (error) return { error: error.message };
 
@@ -53,6 +66,7 @@ export async function updateVenue(
 
 export async function deleteVenue(id: string) {
   const supabase = await createClient();
+  await assertAdmin(supabase);
   const { error } = await supabase.from("venues").delete().eq("id", id);
   if (error) throw new Error(error.message);
   revalidatePath("/venues");

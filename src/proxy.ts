@@ -59,6 +59,16 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // Viewers (accounts without the admin role) never reach the Admin page —
+  // missing/null role defaults to admin, matching the RLS policies and
+  // assertAdmin() so pre-existing accounts aren't locked out by this rule.
+  const isAdmin = (user?.app_metadata?.role ?? "admin") === "admin";
+  if (request.nextUrl.pathname.startsWith("/admin") && !isAdmin) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/";
+    return NextResponse.redirect(url);
+  }
+
   return response;
 }
 

@@ -57,6 +57,9 @@ export function UserRow({ user, isCurrentUser }: { user: AppUserSummary; isCurre
         </p>
       </div>
       <div className="flex items-center gap-2">
+        <Badge variant={user.role === "admin" ? "default" : "outline"}>
+          {user.role === "admin" ? "Admin" : "Viewer"}
+        </Badge>
         {user.mustChangePassword && <Badge variant="outline">Pending password change</Badge>}
 
         <AlertDialog open={resetOpen} onOpenChange={setResetOpen}>

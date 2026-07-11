@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import type { Venue } from "@/lib/types";
 
-export function VenueCard({ venue }: { venue: Venue }) {
+export function VenueCard({ venue, isAdmin = false }: { venue: Venue; isAdmin?: boolean }) {
   const [isPending, startTransition] = useTransition();
   const [confirmOpen, setConfirmOpen] = useState(false);
 
@@ -45,29 +45,31 @@ export function VenueCard({ venue }: { venue: Venue }) {
         <div className="min-w-0 flex-1">
           <p className="truncate font-medium">{venue.name}</p>
         </div>
-        <div className="flex items-center gap-1">
-          <VenueDialog mode="edit" venue={venue} />
-          <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-            <AlertDialogTrigger render={<Button variant="ghost" size="icon" aria-label={`Delete ${venue.name}`} />}>
-              <Trash2 className="size-4 text-destructive" />
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Remove {venue.name}?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Game days that used this venue will keep their other details but lose this venue
-                  reference.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDelete} disabled={isPending}>
-                  {isPending ? "Removing..." : "Remove"}
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </div>
+        {isAdmin && (
+          <div className="flex items-center gap-1">
+            <VenueDialog mode="edit" venue={venue} />
+            <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+              <AlertDialogTrigger render={<Button variant="ghost" size="icon" aria-label={`Delete ${venue.name}`} />}>
+                <Trash2 className="size-4 text-destructive" />
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Remove {venue.name}?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Game days that used this venue will keep their other details but lose this venue
+                    reference.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDelete} disabled={isPending}>
+                    {isPending ? "Removing..." : "Remove"}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

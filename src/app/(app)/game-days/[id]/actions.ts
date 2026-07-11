@@ -4,9 +4,11 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { generateOrderOfPlay } from "@/lib/scheduler";
+import { assertAdmin } from "@/lib/auth-role";
 
 export async function addPlayerToRoster(gameDayId: string, playerId: string) {
   const supabase = await createClient();
+  await assertAdmin(supabase);
   const { error } = await supabase
     .from("game_day_players")
     .insert({ game_day_id: gameDayId, player_id: playerId });
@@ -17,6 +19,7 @@ export async function addPlayerToRoster(gameDayId: string, playerId: string) {
 
 export async function addAllPlayersToRoster(gameDayId: string) {
   const supabase = await createClient();
+  await assertAdmin(supabase);
 
   const [{ data: allPlayers }, { data: rosterRows }] = await Promise.all([
     supabase.from("players").select("id"),
@@ -40,6 +43,7 @@ export async function addAllPlayersToRoster(gameDayId: string) {
 
 export async function removePlayerFromRoster(gameDayId: string, playerId: string) {
   const supabase = await createClient();
+  await assertAdmin(supabase);
   const { error } = await supabase
     .from("game_day_players")
     .delete()
@@ -68,6 +72,12 @@ export async function registerAndAddPlayer(
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid input." };
 
   const supabase = await createClient();
+  try {
+    await assertAdmin(supabase);
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Not allowed." };
+  }
+
   const { data: player, error } = await supabase
     .from("players")
     .insert({ name: parsed.data.name, nickname: parsed.data.nickname || null })
@@ -98,6 +108,11 @@ export async function generateSchedule(
   }
 
   const supabase = await createClient();
+  try {
+    await assertAdmin(supabase);
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Not allowed." };
+  }
 
   // Regenerating after a match has started would corrupt already-recorded
   // results, so only allow it while every match is still untouched.
@@ -153,6 +168,7 @@ export async function generateSchedule(
 
 export async function startMatch(matchId: string, gameDayId: string) {
   const supabase = await createClient();
+  await assertAdmin(supabase);
   const now = new Date().toISOString();
 
   const { error } = await supabase
@@ -180,6 +196,7 @@ export async function endMatch(
   const winnerTeam: 1 | 2 = team1Score > team2Score ? 1 : 2;
 
   const supabase = await createClient();
+  await assertAdmin(supabase);
 
   const { data: match, error: fetchError } = await supabase
     .from("matches")
@@ -224,6 +241,7 @@ export async function endMatch(
 
 export async function endGameDay(gameDayId: string) {
   const supabase = await createClient();
+  await assertAdmin(supabase);
 
   // A running match would be left with no way to record its result once the
   // day is closed out, so require it to be ended first. Pending (unplayed)

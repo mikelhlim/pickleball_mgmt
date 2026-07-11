@@ -1,14 +1,17 @@
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentRole } from "@/lib/auth-role";
 import { PlayerDialog } from "@/components/players/player-dialog";
 import { PlayerCard } from "@/components/players/player-card";
 import type { Player, PlayerStats } from "@/lib/types";
 
 export default async function PlayersPage() {
   const supabase = await createClient();
-  const [{ data: players }, { data: playerStats }] = await Promise.all([
+  const [{ data: players }, { data: playerStats }, role] = await Promise.all([
     supabase.from("players").select("*").order("name"),
     supabase.from("player_stats").select("*"),
+    getCurrentRole(supabase),
   ]);
+  const isAdmin = role === "admin";
 
   const statsById = new Map(((playerStats ?? []) as PlayerStats[]).map((s) => [s.player_id, s]));
 
@@ -16,10 +19,10 @@ export default async function PlayersPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Players</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Players</h1>
           <p className="text-sm text-muted-foreground">Register and manage players.</p>
         </div>
-        <PlayerDialog mode="create" />
+        {isAdmin && <PlayerDialog mode="create" />}
       </div>
 
       {players && players.length > 0 ? (
@@ -32,6 +35,7 @@ export default async function PlayersPage() {
                 player={player}
                 wins={stats?.wins ?? 0}
                 losses={stats?.losses ?? 0}
+                isAdmin={isAdmin}
               />
             );
           })}

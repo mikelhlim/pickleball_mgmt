@@ -26,10 +26,12 @@ export function PlayerCard({
   player,
   wins = 0,
   losses = 0,
+  isAdmin = false,
 }: {
   player: Player;
   wins?: number;
   losses?: number;
+  isAdmin?: boolean;
 }) {
   const [isPending, startTransition] = useTransition();
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -66,29 +68,31 @@ export function PlayerCard({
             )}
           </div>
         </Link>
-        <div className="flex items-center gap-1">
-          <PlayerDialog mode="edit" player={player} />
-          <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-            <AlertDialogTrigger render={<Button variant="ghost" size="icon" aria-label={`Delete ${player.name}`} />}>
-              <Trash2 className="size-4 text-destructive" />
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Remove {player.name}?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This permanently deletes the player. Past match records that included them will keep
-                  their other players but lose this player&apos;s slot.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDelete} disabled={isPending}>
-                  {isPending ? "Removing..." : "Remove"}
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </div>
+        {isAdmin && (
+          <div className="flex items-center gap-1">
+            <PlayerDialog mode="edit" player={player} />
+            <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+              <AlertDialogTrigger render={<Button variant="ghost" size="icon" aria-label={`Delete ${player.name}`} />}>
+                <Trash2 className="size-4 text-destructive" />
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Remove {player.name}?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This permanently deletes the player. Past match records that included them will keep
+                    their other players but lose this player&apos;s slot.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDelete} disabled={isPending}>
+                    {isPending ? "Removing..." : "Remove"}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

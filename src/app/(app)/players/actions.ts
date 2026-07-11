@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { assertAdmin } from "@/lib/auth-role";
 
 const PlayerSchema = z.object({
   name: z.string().trim().min(1, "Name is required."),
@@ -40,6 +41,11 @@ export async function createPlayer(
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid input." };
 
   const supabase = await createClient();
+  try {
+    await assertAdmin(supabase);
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Not allowed." };
+  }
 
   let photoUrl: string | null;
   try {
@@ -73,6 +79,11 @@ export async function updatePlayer(
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid input." };
 
   const supabase = await createClient();
+  try {
+    await assertAdmin(supabase);
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Not allowed." };
+  }
 
   let photoUrl: string | null = null;
   try {
@@ -97,6 +108,7 @@ export async function updatePlayer(
 
 export async function deletePlayer(id: string) {
   const supabase = await createClient();
+  await assertAdmin(supabase);
   const { error } = await supabase.from("players").delete().eq("id", id);
   if (error) throw new Error(error.message);
   revalidatePath("/players");

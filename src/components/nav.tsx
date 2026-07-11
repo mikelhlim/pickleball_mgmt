@@ -6,22 +6,23 @@ import { LayoutDashboard, Users, CalendarDays, MapPin, BarChart3, Settings, LogO
 import { logout } from "@/lib/actions/auth";
 import { cn } from "@/lib/utils";
 
-const links = [
+const baseLinks = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/players", label: "Players", icon: Users },
   { href: "/game-days", label: "Game Days", icon: CalendarDays },
   { href: "/venues", label: "Venues", icon: MapPin },
   { href: "/statistics", label: "Statistics", icon: BarChart3 },
-  { href: "/admin", label: "Admin", icon: Settings },
 ];
+const adminLink = { href: "/admin", label: "Admin", icon: Settings };
 
 function isActive(pathname: string, href: string) {
   if (href === "/") return pathname === "/";
   return pathname.startsWith(href);
 }
 
-export function Nav() {
+export function Nav({ isAdmin }: { isAdmin: boolean }) {
   const pathname = usePathname();
+  const links = isAdmin ? [...baseLinks, adminLink] : baseLinks;
 
   return (
     <>

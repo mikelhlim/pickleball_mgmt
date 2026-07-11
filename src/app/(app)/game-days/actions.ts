@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { assertAdmin } from "@/lib/auth-role";
 
 const GameDaySchema = z.object({
   session_date: z.string().min(1, "Date is required."),
@@ -25,6 +26,12 @@ export async function createGameDay(
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid input." };
 
   const supabase = await createClient();
+  try {
+    await assertAdmin(supabase);
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Not allowed." };
+  }
+
   const { data, error } = await supabase
     .from("game_days")
     .insert({

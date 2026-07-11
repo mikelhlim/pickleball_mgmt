@@ -4,6 +4,7 @@ import { UserRow } from "@/components/admin/user-row";
 import { DeleteAllDialog } from "@/components/admin/delete-all-dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { createClient } from "@/lib/supabase/server";
+import { requireAdminPage } from "@/lib/auth-role";
 
 // The admin client has no cookies() dependency to signal dynamic rendering
 // on its own, but this page must never be statically prerendered — it calls
@@ -12,6 +13,8 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {
   const supabase = await createClient();
+  await requireAdminPage(supabase);
+
   const [users, {
     data: { user: currentUser },
   }] = await Promise.all([listAppUsers(), supabase.auth.getUser()]);
@@ -19,7 +22,7 @@ export default async function AdminPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Admin</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Admin</h1>
         <p className="text-sm text-muted-foreground">Administrative actions.</p>
       </div>
 
