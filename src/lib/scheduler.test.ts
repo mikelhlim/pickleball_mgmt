@@ -72,6 +72,23 @@ function assertNoRepeatBeforeFullPartnerCoverage(matches: MatchAssignment[], pla
   }
 }
 
+/**
+ * Bench freshness is a best-effort preference (lower priority than partner
+ * freshness), not a strict no-repeat-before-full-coverage guarantee — so
+ * this checks the weaker, still-meaningful property: given enough matches,
+ * every player ends up sitting out alongside every other player at least
+ * once over the course of the session, rather than always the same one or
+ * two bench-mates.
+ */
+function benchCompanionsOf(matches: MatchAssignment[], playerId: string): Set<string> {
+  const companions = new Set<string>();
+  for (const match of matches) {
+    if (!match.sittingOut.includes(playerId)) continue;
+    for (const other of match.sittingOut) if (other !== playerId) companions.add(other);
+  }
+  return companions;
+}
+
 function maxConsecutiveStreak(matches: MatchAssignment[], playerId: string): number {
   let max = 0;
   let current = 0;
@@ -147,14 +164,18 @@ describe("generateOrderOfPlay", () => {
     expect(Math.max(...timesPlayed) - Math.min(...timesPlayed)).toBeLessThanOrEqual(1);
   });
 
-  it("large session (many matches) stays valid throughout, with 6 players banning any 2nd consecutive sit-out", () => {
+  it("n=6: everyone benches with everyone, at the cost of an occasional 3rd straight match (rule 4 needs the raised play-streak cap here)", () => {
     const players = playersOf(6);
     const matches = generateOrderOfPlay(players, 50, 123);
     assertStructurallyValid(matches, players);
     assertPartnersKeptFreshGreedily(matches);
     for (const id of players) {
-      expect(maxConsecutiveStreak(matches, id)).toBeLessThanOrEqual(2);
-      expect(maxConsecutiveSitOut(matches, id)).toBeLessThanOrEqual(1);
+      // 6 players get the raised cap of 3 consecutive matches — a hard 2 would
+      // force the roster into 3 fixed bench pairs and starve rule 4.
+      expect(maxConsecutiveStreak(matches, id)).toBeLessThanOrEqual(3);
+      expect(maxConsecutiveSitOut(matches, id)).toBeLessThanOrEqual(2);
+      // Rule 4: every player sits out alongside all 5 others over the session.
+      expect(benchCompanionsOf(matches, id).size).toBe(5);
     }
   });
 
@@ -188,6 +209,47 @@ describe("generateOrderOfPlay", () => {
         if (onCourt.includes(id)) for (const other of onCourt) if (other !== id) courtmates.add(other);
       }
       expect(courtmates.size).toBeGreaterThan(3);
+    }
+  });
+
+  it.each([6, 7, 8, 9])(
+    "n=%i, 40 matches: every player eventually sits out alongside every other player (rule 4)",
+    (n) => {
+      const players = playersOf(n);
+      const matches = generateOrderOfPlay(players, 40, 99);
+      assertStructurallyValid(matches, players);
+      for (const id of players) {
+        expect(benchCompanionsOf(matches, id).size).toBe(n - 1);
+      }
+    }
+  );
+
+  // All four sit-out rules at once, across many seeds, so a future change that
+  // breaks one for some unlucky seed gets caught. n=5 is excluded here: with
+  // only one player benched per match there is never a bench pair, so rules 3
+  // and 4 are vacuous (covered by the dedicated n=5 test above).
+  describe("all four sit-out rules hold across seeds", () => {
+    for (let n = 6; n <= 9; n++) {
+      it(`n=${n}: sit-out caps, no consecutive shared bench, and full bench coverage`, () => {
+        const players = playersOf(n);
+        const sitOutCap = n === 7 ? 1 : 2;
+        for (let seed = 1; seed <= 40; seed++) {
+          const matches = generateOrderOfPlay(players, 30, seed);
+          assertStructurallyValid(matches, players);
+          for (const id of players) {
+            // Rules 1 & 2: sit-out cap (1 for seven players, else 2).
+            expect(maxConsecutiveSitOut(matches, id)).toBeLessThanOrEqual(sitOutCap);
+            // Rule 4: benches with all other players over the session.
+            expect(benchCompanionsOf(matches, id).size).toBe(n - 1);
+          }
+          // Rule 3: the same pair never sits out in back-to-back matches.
+          for (let i = 1; i < matches.length; i++) {
+            const previousBench = new Set(matches[i - 1].sittingOut);
+            const carryOver = matches[i].sittingOut.filter((id) => previousBench.has(id));
+            expect(carryOver.length).toBeLessThan(2);
+          }
+        }
+      });
     }
   });
 
