@@ -64,6 +64,7 @@ export function MatchCard({
   team2,
   sittingOut,
   locked = false,
+  isAdmin = false,
 }: {
   match: Match;
   gameDayId: string;
@@ -71,6 +72,7 @@ export function MatchCard({
   team2: [Player | null, Player | null];
   sittingOut: Player[];
   locked?: boolean;
+  isAdmin?: boolean;
 }) {
   const [isPending, startTransition] = useTransition();
   const [endDialogOpen, setEndDialogOpen] = useState(false);
@@ -122,7 +124,15 @@ export function MatchCard({
       : null;
 
   return (
-    <Card className={match.status === "in_progress" ? "border-chart-4 bg-chart-4/5 ring-1 ring-chart-4" : ""}>
+    <Card
+      className={
+        match.status === "in_progress"
+          ? "border-chart-4 bg-chart-4/5 ring-1 ring-chart-4"
+          : match.status === "cancelled"
+            ? "opacity-60"
+            : ""
+      }
+    >
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <span className="text-sm font-semibold text-muted-foreground">Match {match.match_number}</span>
         {match.status === "pending" && <Badge variant="outline">Pending</Badge>}
@@ -134,6 +144,7 @@ export function MatchCard({
             Completed · {match.duration_seconds != null ? formatDuration(match.duration_seconds) : "—"}
           </Badge>
         )}
+        {match.status === "cancelled" && <Badge variant="outline">Cancelled</Badge>}
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
@@ -181,14 +192,20 @@ export function MatchCard({
           <p className="text-sm text-muted-foreground">Not played — game day has ended.</p>
         )}
 
-        {match.status === "pending" && !locked && (
+        {match.status === "cancelled" && (
+          <p className="text-sm text-muted-foreground">
+            Cancelled — game day ended automatically after 4 hours.
+          </p>
+        )}
+
+        {match.status === "pending" && !locked && isAdmin && (
           <Button onClick={handleStart} disabled={isPending} className="w-full">
             <Play className="size-4" />
             Start Match
           </Button>
         )}
 
-        {match.status === "in_progress" && (
+        {match.status === "in_progress" && isAdmin && (
           <Dialog open={endDialogOpen} onOpenChange={setEndDialogOpen}>
             <DialogTrigger render={<Button variant="secondary" className="w-full" />}>
               End Match

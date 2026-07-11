@@ -61,13 +61,21 @@ create table if not exists matches (
   team1_score integer,
   team2_score integer,
   winner_team integer check (winner_team in (1, 2)),
-  status text not null default 'pending' check (status in ('pending', 'in_progress', 'completed')),
+  status text not null default 'pending' check (status in ('pending', 'in_progress', 'completed', 'cancelled')),
   started_at timestamptz,
   ended_at timestamptz,
   duration_seconds integer,
   created_at timestamptz not null default now(),
   unique (game_day_id, match_number)
 );
+
+-- Widens the status check when re-running this script against a database
+-- created before 'cancelled' existed (used when a game day auto-ends after
+-- 4 hours and some matches never got a final score — see
+-- src/lib/game-day-lifecycle.ts).
+alter table matches drop constraint if exists matches_status_check;
+alter table matches add constraint matches_status_check
+  check (status in ('pending', 'in_progress', 'completed', 'cancelled'));
 
 create index if not exists idx_game_day_players_game_day on game_day_players (game_day_id);
 create index if not exists idx_game_day_players_player on game_day_players (player_id);

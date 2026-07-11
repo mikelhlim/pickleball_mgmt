@@ -1,9 +1,12 @@
 import Link from "next/link";
 import { format, parseISO } from "date-fns";
 import { createClient } from "@/lib/supabase/server";
+import { autoEndIfExpired } from "@/lib/game-day-lifecycle";
+import { getCurrentRole } from "@/lib/auth-role";
 import { NewGameDayDialog } from "@/components/game-days/new-game-day-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { formatHoursMinutesBetween, formatTime } from "@/lib/format";
 import type { GameDay, Venue } from "@/lib/types";
 
 const statusVariant: Record<GameDay["status"], "default" | "secondary" | "outline"> = {
@@ -20,20 +23,25 @@ export default async function GameDaysPage() {
   ]);
 
   const venuesById = new Map(((venues ?? []) as Venue[]).map((v) => [v.id, v]));
+  const [sessions, role] = await Promise.all([
+    Promise.all(((gameDays ?? []) as GameDay[]).map((gd) => autoEndIfExpired(supabase, gd))),
+    getCurrentRole(supabase),
+  ]);
+  const isAdmin = role === "admin";
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Game Days</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Game Days</h1>
           <p className="text-sm text-muted-foreground">Create and run open-play sessions.</p>
         </div>
-        <NewGameDayDialog venues={(venues ?? []) as Venue[]} />
+        {isAdmin && <NewGameDayDialog venues={(venues ?? []) as Venue[]} />}
       </div>
 
-      {gameDays && gameDays.length > 0 ? (
+      {sessions.length > 0 ? (
         <div className="space-y-3">
-          {(gameDays as GameDay[]).map((gameDay) => (
+          {sessions.map((gameDay) => (
             <Link key={gameDay.id} href={`/game-days/${gameDay.id}`}>
               <Card className="transition-colors hover:bg-accent/50">
                 <CardContent className="flex items-center justify-between p-4">
@@ -45,6 +53,11 @@ export default async function GameDaysPage() {
                       {gameDay.num_matches} matches
                       {gameDay.venue_id && venuesById.get(gameDay.venue_id) && (
                         <> · {venuesById.get(gameDay.venue_id)!.name}</>
+                      )}
+                      {gameDay.started_at && <> · Started {formatTime(gameDay.started_at)}</>}
+                      {gameDay.ended_at && <> · Ended {formatTime(gameDay.ended_at)}</>}
+                      {gameDay.started_at && gameDay.ended_at && (
+                        <> · {formatHoursMinutesBetween(gameDay.started_at, gameDay.ended_at)}</>
                       )}
                     </p>
                   </div>

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { format, parseISO } from "date-fns";
 import { ArrowLeft, Trophy } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { autoEndIfExpired } from "@/lib/game-day-lifecycle";
 import { formatDuration, formatTime } from "@/lib/format";
 import { computeMatchStats } from "@/lib/stats";
 import { StatsCharts } from "@/components/statistics/stats-charts";
@@ -24,13 +25,15 @@ export default async function GameDayStatsPage({
   const { gameDayId } = await params;
   const supabase = await createClient();
 
-  const { data: gameDay } = (await supabase
+  const { data: fetchedGameDay } = (await supabase
     .from("game_days")
     .select("*")
     .eq("id", gameDayId)
     .maybeSingle()) as { data: GameDay | null };
 
-  if (!gameDay) notFound();
+  if (!fetchedGameDay) notFound();
+
+  const gameDay = await autoEndIfExpired(supabase, fetchedGameDay);
 
   const [{ data: matches }, { data: allPlayers }, { data: venue }] = await Promise.all([
     supabase.from("matches").select("*").eq("game_day_id", gameDayId).order("match_number"),
@@ -59,7 +62,7 @@ export default async function GameDayStatsPage({
           <ArrowLeft className="size-4" />
           Back to All Games
         </Link>
-        <h1 className="text-2xl font-semibold tracking-tight">
+        <h1 className="text-3xl font-bold tracking-tight">
           {format(parseISO(gameDay.session_date), "EEEE, MMMM d, yyyy")}
         </h1>
         <p className="text-sm text-muted-foreground">
@@ -83,8 +86,14 @@ export default async function GameDayStatsPage({
         <CardHeader>
           <CardTitle>Team Pairings — This Game Day</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-3">
           <PartnershipTable partnerships={partnershipStats} nameById={nameById} />
+          {partnershipStats.some((p) => p.matches_played > 0) && (
+            <p className="text-xs text-muted-foreground">
+              Each match is played by two pairings, so the “Played” column totals twice the
+              number of completed matches ({completed.length}).
+            </p>
+          )}
         </CardContent>
       </Card>
 

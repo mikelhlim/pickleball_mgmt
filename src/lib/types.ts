@@ -25,7 +25,7 @@ export type GameDay = {
   created_at: string;
 };
 
-export type MatchStatus = "pending" | "in_progress" | "completed";
+export type MatchStatus = "pending" | "in_progress" | "completed" | "cancelled";
 
 export type Match = {
   id: string;

@@ -1,11 +1,15 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { format, parseISO } from "date-fns";
+import { ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { autoEndIfExpired } from "@/lib/game-day-lifecycle";
+import { getCurrentRole } from "@/lib/auth-role";
 import { RosterPanel } from "@/components/game-days/roster-panel";
 import { MatchCard } from "@/components/game-days/match-card";
 import { EndGameDayDialog } from "@/components/game-days/end-game-day-dialog";
 import { Badge } from "@/components/ui/badge";
-import { formatTime } from "@/lib/format";
+import { formatHoursMinutesBetween, formatTime } from "@/lib/format";
 import type { GameDay, Match, Player, Venue } from "@/lib/types";
 
 export default async function GameDayDetailPage({
@@ -16,15 +20,17 @@ export default async function GameDayDetailPage({
   const { id } = await params;
   const supabase = await createClient();
 
-  const { data: gameDay } = (await supabase
+  const { data: fetchedGameDay } = (await supabase
     .from("game_days")
     .select("*")
     .eq("id", id)
     .maybeSingle()) as { data: GameDay | null };
 
-  if (!gameDay) notFound();
+  if (!fetchedGameDay) notFound();
 
-  const [{ data: rosterRows }, { data: allPlayers }, { data: matches }, { data: venue }] =
+  const gameDay = await autoEndIfExpired(supabase, fetchedGameDay);
+
+  const [{ data: rosterRows }, { data: allPlayers }, { data: matches }, { data: venue }, role] =
     await Promise.all([
       supabase.from("game_day_players").select("player_id").eq("game_day_id", id),
       supabase.from("players").select("*").order("name"),
@@ -32,7 +38,9 @@ export default async function GameDayDetailPage({
       gameDay.venue_id
         ? supabase.from("venues").select("*").eq("id", gameDay.venue_id).maybeSingle()
         : Promise.resolve({ data: null as Venue | null }),
+      getCurrentRole(supabase),
     ]);
+  const isAdmin = role === "admin";
 
   const players = (allPlayers ?? []) as Player[];
   const playersById = new Map(players.map((p) => [p.id, p]));
@@ -42,24 +50,34 @@ export default async function GameDayDetailPage({
   const availablePlayers = players.filter((p) => !rosterIds.has(p.id));
 
   const matchList = (matches ?? []) as Match[];
-  const canEditRoster = gameDay.status !== "completed" && matchList.every((m) => m.status === "pending");
+  const canEditRoster =
+    isAdmin && gameDay.status !== "completed" && matchList.every((m) => m.status === "pending");
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
+          <Link
+            href="/game-days"
+            className="mb-2 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft className="size-4" />
+            Back to Game Days
+          </Link>
+          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
             {format(parseISO(gameDay.session_date), "EEEE, MMMM d, yyyy")}
           </h1>
           <p className="text-sm text-muted-foreground">
             {gameDay.num_matches} matches
             {venue && <> · {venue.name}</>}
             {gameDay.started_at && <> · Started {formatTime(gameDay.started_at)}</>}
-            {gameDay.ended_at && <> · Ended {formatTime(gameDay.ended_at)}</>}
+            {gameDay.started_at && gameDay.ended_at && (
+              <> · {formatHoursMinutesBetween(gameDay.started_at, gameDay.ended_at)}</>
+            )}
           </p>
         </div>
         <div className="flex items-center gap-3">
-          {gameDay.status === "in_progress" && <EndGameDayDialog gameDayId={id} />}
+          {gameDay.status === "in_progress" && isAdmin && <EndGameDayDialog gameDayId={id} />}
           <Badge
             variant={
               gameDay.status === "completed"
@@ -85,7 +103,7 @@ export default async function GameDayDetailPage({
 
       {matchList.length > 0 && (
         <div className="space-y-4">
-          <h2 className="text-lg font-semibold tracking-tight">Order of Play</h2>
+          <h2 className="text-xl font-semibold tracking-tight">Order of Play</h2>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             {matchList.map((match) => {
               const onCourtIds = new Set(
@@ -113,6 +131,7 @@ export default async function GameDayDetailPage({
                   ]}
                   sittingOut={sittingOut}
                   locked={gameDay.status === "completed"}
+                  isAdmin={isAdmin}
                 />
               );
             })}
