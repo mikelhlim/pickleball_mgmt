@@ -9,6 +9,8 @@ export type Player = {
 export type Venue = {
   id: string;
   name: string;
+  location: string | null;
+  contact_number: string | null;
   created_at: string;
 };
 

@@ -7,6 +7,8 @@ import { assertAdmin } from "@/lib/auth-role";
 
 const VenueSchema = z.object({
   name: z.string().trim().min(1, "Venue name is required."),
+  location: z.string().trim().nullable().optional(),
+  contact_number: z.string().trim().nullable().optional(),
 });
 
 export type VenueFormState =
@@ -17,7 +19,11 @@ export async function createVenue(
   _prev: VenueFormState,
   formData: FormData
 ): Promise<VenueFormState> {
-  const parsed = VenueSchema.safeParse({ name: formData.get("name") });
+  const parsed = VenueSchema.safeParse({
+    name: formData.get("name"),
+    location: formData.get("location"),
+    contact_number: formData.get("contact_number"),
+  });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid input." };
 
   const supabase = await createClient();
@@ -29,7 +35,11 @@ export async function createVenue(
 
   const { data, error } = await supabase
     .from("venues")
-    .insert({ name: parsed.data.name })
+    .insert({
+      name: parsed.data.name,
+      location: parsed.data.location || null,
+      contact_number: parsed.data.contact_number || null,
+    })
     .select("id, name")
     .single();
   if (error || !data) return { error: error?.message ?? "Failed to add venue." };
@@ -46,7 +56,11 @@ export async function updateVenue(
   const id = formData.get("id");
   if (typeof id !== "string" || !id) return { error: "Missing venue id." };
 
-  const parsed = VenueSchema.safeParse({ name: formData.get("name") });
+  const parsed = VenueSchema.safeParse({
+    name: formData.get("name"),
+    location: formData.get("location"),
+    contact_number: formData.get("contact_number"),
+  });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid input." };
 
   const supabase = await createClient();
@@ -56,7 +70,14 @@ export async function updateVenue(
     return { error: e instanceof Error ? e.message : "Not allowed." };
   }
 
-  const { error } = await supabase.from("venues").update({ name: parsed.data.name }).eq("id", id);
+  const { error } = await supabase
+    .from("venues")
+    .update({
+      name: parsed.data.name,
+      location: parsed.data.location || null,
+      contact_number: parsed.data.contact_number || null,
+    })
+    .eq("id", id);
   if (error) return { error: error.message };
 
   revalidatePath("/venues");

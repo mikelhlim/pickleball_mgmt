@@ -22,8 +22,15 @@ create table if not exists players (
 create table if not exists venues (
   id uuid primary key default gen_random_uuid(),
   name text not null,
+  location text,
+  contact_number text,
   created_at timestamptz not null default now()
 );
+
+-- Adds columns when re-running this script against a database created
+-- before those columns existed.
+alter table venues add column if not exists location text;
+alter table venues add column if not exists contact_number text;
 
 create table if not exists game_days (
   id uuid primary key default gen_random_uuid(),

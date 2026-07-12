@@ -65,6 +65,27 @@ export function VenueDialog({ mode, venue }: { mode: "create" | "edit"; venue?: 
             <Label htmlFor="name">Name</Label>
             <Input key={venue?.name} id="name" name="name" defaultValue={venue?.name} required />
           </div>
+          <div className="space-y-2">
+            <Label htmlFor="location">Location</Label>
+            <Input
+              key={venue?.location}
+              id="location"
+              name="location"
+              placeholder="Address or area (optional)"
+              defaultValue={venue?.location ?? ""}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="contact_number">Contact number</Label>
+            <Input
+              key={venue?.contact_number}
+              id="contact_number"
+              name="contact_number"
+              type="tel"
+              placeholder="Optional"
+              defaultValue={venue?.contact_number ?? ""}
+            />
+          </div>
           <DialogFooter>
             <Button type="submit" disabled={isPending}>
               {isPending ? "Saving..." : "Save"}

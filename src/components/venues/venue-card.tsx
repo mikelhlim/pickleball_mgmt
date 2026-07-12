@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { MapPin, Trash2 } from "lucide-react";
+import { MapPin, Phone, Trash2 } from "lucide-react";
 import { deleteVenue } from "@/app/(app)/venues/actions";
 import { VenueDialog } from "./venue-dialog";
 import { Card, CardContent } from "@/components/ui/card";
@@ -44,6 +44,18 @@ export function VenueCard({ venue, isAdmin = false }: { venue: Venue; isAdmin?: 
         </div>
         <div className="min-w-0 flex-1">
           <p className="truncate font-medium">{venue.name}</p>
+          {venue.location && (
+            <p className="flex items-center gap-1 truncate text-xs text-muted-foreground">
+              <MapPin className="size-3 shrink-0" />
+              {venue.location}
+            </p>
+          )}
+          {venue.contact_number && (
+            <p className="flex items-center gap-1 truncate text-xs text-muted-foreground">
+              <Phone className="size-3 shrink-0" />
+              {venue.contact_number}
+            </p>
+          )}
         </div>
         {isAdmin && (
           <div className="flex items-center gap-1">
