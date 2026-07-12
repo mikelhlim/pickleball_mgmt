@@ -6,6 +6,7 @@ import { PartnershipTable } from "@/components/statistics/partnership-table";
 import { VenueChart } from "@/components/statistics/venue-chart";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatTime } from "@/lib/format";
 import type { GameDay, PartnershipStats, PlayerStats, Venue } from "@/lib/types";
 
 export default async function StatisticsPage() {
@@ -72,6 +73,32 @@ export default async function StatisticsPage() {
 
       <Card>
         <CardHeader>
+          <CardTitle>Game Day History</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-1">
+          {(gameDays ?? []).length === 0 && (
+            <p className="text-sm text-muted-foreground">No game days yet.</p>
+          )}
+          {((gameDays ?? []) as GameDay[]).map((gd) => (
+            <Link
+              key={gd.id}
+              href={`/statistics/${gd.id}`}
+              className="flex items-center justify-between gap-3 rounded-md p-2 text-sm hover:bg-accent"
+            >
+              <span>
+                {format(parseISO(gd.session_date), "EEEE, MMMM d, yyyy")}
+                {gd.status === "completed" && gd.ended_at && (
+                  <span className="text-muted-foreground"> · Ended {formatTime(gd.ended_at)}</span>
+                )}
+              </span>
+              <Badge variant="outline">{gd.status.replace("_", " ")}</Badge>
+            </Link>
+          ))}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <CardTitle>Games per Venue</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -88,27 +115,6 @@ export default async function StatisticsPage() {
               ))}
             </div>
           )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Game Day History</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-1">
-          {(gameDays ?? []).length === 0 && (
-            <p className="text-sm text-muted-foreground">No game days yet.</p>
-          )}
-          {((gameDays ?? []) as GameDay[]).map((gd) => (
-            <Link
-              key={gd.id}
-              href={`/statistics/${gd.id}`}
-              className="flex items-center justify-between rounded-md p-2 text-sm hover:bg-accent"
-            >
-              <span>{format(parseISO(gd.session_date), "EEEE, MMMM d, yyyy")}</span>
-              <Badge variant="outline">{gd.status.replace("_", " ")}</Badge>
-            </Link>
-          ))}
         </CardContent>
       </Card>
     </div>

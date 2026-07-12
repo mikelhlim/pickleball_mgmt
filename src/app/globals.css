@@ -67,8 +67,8 @@
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);
-  --chart-1: #0ca30c;
-  --chart-2: #d03b3b;
+  --chart-1: #8aa30a;
+  --chart-2: #6b7280;
   --chart-3: #2a78d6;
   --chart-4: #eda100;
   --chart-5: #4a3aa7;
@@ -102,8 +102,8 @@
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.556 0 0);
-  --chart-1: #0ca30c;
-  --chart-2: #e66767;
+  --chart-1: #c4da1e;
+  --chart-2: #9ca3af;
   --chart-3: #3987e5;
   --chart-4: #c98500;
   --chart-5: #9085e9;

@@ -125,7 +125,9 @@ export default async function GameDayStatsPage({
                     ? formatDuration(match.duration_seconds)
                     : match.status === "in_progress"
                       ? "Live"
-                      : match.status.replace("_", " ")}
+                      : match.status === "cancelled"
+                        ? "Cancelled"
+                        : "Pending"}
                 </Badge>
               </CardHeader>
               <CardContent>
@@ -145,9 +147,19 @@ export default async function GameDayStatsPage({
                     <span className="truncate text-sm">
                       {playerLabel(team1[0])} &amp; {playerLabel(team1[1])}
                     </span>
+                    {match.team1_score != null && (
+                      <span className="shrink-0 text-sm font-semibold tabular-nums">
+                        {match.team1_score}
+                      </span>
+                    )}
                   </div>
                   <span className="text-xs text-muted-foreground">vs</span>
                   <div className="flex flex-1 items-center justify-end gap-2 text-right">
+                    {match.team2_score != null && (
+                      <span className="shrink-0 text-sm font-semibold tabular-nums">
+                        {match.team2_score}
+                      </span>
+                    )}
                     <span className="truncate text-sm">
                       {playerLabel(team2[0])} &amp; {playerLabel(team2[1])}
                     </span>
