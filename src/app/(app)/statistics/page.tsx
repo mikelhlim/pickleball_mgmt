@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { StatsCharts } from "@/components/statistics/stats-charts";
 import { PartnershipTable } from "@/components/statistics/partnership-table";
 import { VenueChart } from "@/components/statistics/venue-chart";
+import { StatsChatbot } from "@/components/statistics/stats-chatbot";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatTime } from "@/lib/format";
@@ -49,6 +50,8 @@ export default async function StatisticsPage() {
         <h1 className="text-3xl font-bold tracking-tight">Statistics</h1>
         <p className="text-sm text-muted-foreground">Win/loss records across all game days.</p>
       </div>
+
+      <StatsChatbot />
 
       <Card>
         <CardHeader>

@@ -128,3 +128,24 @@
     @apply font-sans;
   }
 }
+
+/* Isolate #stats-chat-report when saving the Stats Assistant thread as a
+   PDF via the browser's print dialog — hide everything else on the page,
+   including the rest of the dialog chrome, regardless of portal depth. */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #stats-chat-report,
+  #stats-chat-report * {
+    visibility: visible;
+  }
+  #stats-chat-report {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    max-height: none;
+    overflow: visible;
+  }
+}
