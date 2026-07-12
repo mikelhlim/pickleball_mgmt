@@ -129,23 +129,36 @@
   }
 }
 
-/* Isolate #stats-chat-report when saving the Stats Assistant thread as a
-   PDF via the browser's print dialog — hide everything else on the page,
-   including the rest of the dialog chrome, regardless of portal depth. */
+/* Isolate #stats-chat-print when saving the Stats Assistant thread as a
+   PDF via the browser's print dialog — hide everything else on the page.
+   This is a separate, unconstrained copy of the thread (see
+   stats-chatbot.tsx) rather than the live dialog itself, since the dialog
+   is `position: fixed` inside an 85vh `overflow-hidden` ancestor and would
+   clip anything scrolled out of view (e.g. a long table) from the PDF. */
 @media print {
   body * {
     visibility: hidden;
   }
-  #stats-chat-report,
-  #stats-chat-report * {
+  #stats-chat-print,
+  #stats-chat-print * {
     visibility: visible;
   }
-  #stats-chat-report {
+  #stats-chat-print {
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
-    max-height: none;
-    overflow: visible;
+  }
+  #stats-chat-print table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 1em;
+  }
+  #stats-chat-print th,
+  #stats-chat-print td {
+    border: 1px solid #ccc;
+    padding: 4px 8px;
+    text-align: left;
+    font-size: 0.9em;
   }
 }

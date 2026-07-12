@@ -21,7 +21,7 @@ function isActive(pathname: string, href: string) {
   return pathname.startsWith(href);
 }
 
-export function Nav({ isAdmin }: { isAdmin: boolean }) {
+export function Nav({ isAdmin, userEmail }: { isAdmin: boolean; userEmail: string | null }) {
   const pathname = usePathname();
   const links = isAdmin ? [...baseLinks, adminLink] : baseLinks;
 
@@ -48,15 +48,22 @@ export function Nav({ isAdmin }: { isAdmin: boolean }) {
               </Link>
             ))}
           </nav>
-          <form action={logout}>
-            <button
-              type="submit"
-              className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-            >
-              <LogOut className="size-4" />
-              <span className="hidden sm:inline">Sign out</span>
-            </button>
-          </form>
+          <div className="flex items-center gap-2">
+            {userEmail && (
+              <span className="hidden max-w-[160px] truncate text-sm text-muted-foreground sm:inline">
+                {userEmail}
+              </span>
+            )}
+            <form action={logout}>
+              <button
+                type="submit"
+                className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+              >
+                <LogOut className="size-4" />
+                <span className="hidden sm:inline">Sign out</span>
+              </button>
+            </form>
+          </div>
         </div>
       </header>
 

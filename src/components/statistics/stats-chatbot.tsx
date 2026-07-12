@@ -69,7 +69,7 @@ export function StatsChatbot() {
             <DialogDescription>Answers are generated from this app&apos;s data only.</DialogDescription>
           </DialogHeader>
 
-          <div id="stats-chat-report" className="flex-1 space-y-6 overflow-y-auto px-6 py-4">
+          <div className="flex-1 space-y-6 overflow-y-auto px-6 py-4">
             {exchanges.map((ex, i) => (
               <div key={i} className="space-y-2">
                 <p className="text-sm font-semibold">{ex.question}</p>
@@ -129,6 +129,47 @@ export function StatsChatbot() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Print-only copy of the thread. The dialog itself can't be printed
+          in place — it's `position: fixed` with `overflow-hidden` on an
+          85vh-capped ancestor, so anything scrolled past that height gets
+          clipped from the PDF. Rendering a plain, unconstrained copy here
+          and hiding everything else in @media print (see globals.css)
+          guarantees the full thread — including long tables — makes it
+          onto the page. */}
+      {exchanges.length > 0 && (
+        <div id="stats-chat-print" className="hidden print:block">
+          <h2>Stats Assistant</h2>
+          {exchanges.map((ex, i) => (
+            <div key={i}>
+              <p>
+                <strong>{ex.question}</strong>
+              </p>
+              <p>{ex.answer.answer}</p>
+              {ex.answer.table && ex.answer.table.rows.length > 0 && (
+                <table>
+                  <thead>
+                    <tr>
+                      {ex.answer.table.headers.map((h, hi) => (
+                        <th key={hi}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {ex.answer.table.rows.map((row, ri) => (
+                      <tr key={ri}>
+                        {row.map((cell, ci) => (
+                          <td key={ci}>{cell}</td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </>
   );
 }
