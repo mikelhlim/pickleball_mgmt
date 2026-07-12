@@ -138,7 +138,7 @@ export default async function DashboardPage() {
                       {p.nickname || p.name}
                     </span>
                     <span className="tabular-nums text-muted-foreground">
-                      {Math.round(winPct(p.wins, p.matches_played) * 100)}%
+                      {p.wins}W – {p.losses}L ({Math.round(winPct(p.wins, p.matches_played) * 100)}%)
                     </span>
                   </li>
                 ))}
@@ -170,7 +170,7 @@ export default async function DashboardPage() {
                       {nameById.get(p.player_b_id) ?? "Unknown"}
                     </span>
                     <span className="tabular-nums text-muted-foreground">
-                      {Math.round(winPct(p.wins, p.matches_played) * 100)}%
+                      {p.wins}W – {p.losses}L ({Math.round(winPct(p.wins, p.matches_played) * 100)}%)
                     </span>
                   </li>
                 ))}
