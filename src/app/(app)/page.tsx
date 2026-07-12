@@ -23,16 +23,21 @@ export default async function DashboardPage() {
       .order("session_date", { ascending: false })
       .order("created_at", { ascending: false })
       .limit(15),
-    supabase.from("player_stats").select("*").gt("matches_played", 0).order("wins", { ascending: false }).limit(3),
-    supabase
-      .from("partnership_stats")
-      .select("*")
-      .gt("matches_played", 0)
-      .order("wins", { ascending: false })
-      .limit(3),
+    supabase.from("player_stats").select("*").gt("matches_played", 0),
+    supabase.from("partnership_stats").select("*").gt("matches_played", 0),
     supabase.from("players").select("id, name, nickname"),
     supabase.from("venues").select("*"),
   ]);
+
+  const winPct = (wins: number, matchesPlayed: number) => (matchesPlayed > 0 ? wins / matchesPlayed : 0);
+  const byWinPctDesc = (a: { wins: number; matches_played: number }, b: { wins: number; matches_played: number }) =>
+    winPct(b.wins, b.matches_played) - winPct(a.wins, a.matches_played) || b.wins - a.wins;
+
+  const topPlayersRanked = ((topPlayers ?? []) as PlayerStats[]).slice().sort(byWinPctDesc).slice(0, 3);
+  const topPartnershipsRanked = ((topPartnerships ?? []) as PartnershipStats[])
+    .slice()
+    .sort(byWinPctDesc)
+    .slice(0, 3);
 
   const gameDays = (recentGameDays ?? []) as GameDay[];
   const gameDayIds = gameDays.map((gd) => gd.id);
@@ -122,17 +127,19 @@ export default async function DashboardPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {(topPlayers ?? []).length === 0 ? (
+            {topPlayersRanked.length === 0 ? (
               <p className="text-sm text-muted-foreground">No completed matches yet.</p>
             ) : (
               <ol className="space-y-2">
-                {((topPlayers ?? []) as PlayerStats[]).map((p, i) => (
+                {topPlayersRanked.map((p, i) => (
                   <li key={p.player_id} className="flex items-center justify-between text-sm">
                     <span className="flex items-center gap-2">
                       <span className="text-muted-foreground">{i + 1}.</span>
                       {p.nickname || p.name}
                     </span>
-                    <span className="tabular-nums text-muted-foreground">{p.wins} wins</span>
+                    <span className="tabular-nums text-muted-foreground">
+                      {Math.round(winPct(p.wins, p.matches_played) * 100)}%
+                    </span>
                   </li>
                 ))}
               </ol>
@@ -148,11 +155,11 @@ export default async function DashboardPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {(topPartnerships ?? []).length === 0 ? (
+            {topPartnershipsRanked.length === 0 ? (
               <p className="text-sm text-muted-foreground">No completed matches yet.</p>
             ) : (
               <ol className="space-y-2">
-                {((topPartnerships ?? []) as PartnershipStats[]).map((p, i) => (
+                {topPartnershipsRanked.map((p, i) => (
                   <li
                     key={`${p.player_a_id}-${p.player_b_id}`}
                     className="flex items-center justify-between text-sm"
@@ -162,7 +169,9 @@ export default async function DashboardPage() {
                       {nameById.get(p.player_a_id) ?? "Unknown"} &amp;{" "}
                       {nameById.get(p.player_b_id) ?? "Unknown"}
                     </span>
-                    <span className="tabular-nums text-muted-foreground">{p.wins} wins</span>
+                    <span className="tabular-nums text-muted-foreground">
+                      {Math.round(winPct(p.wins, p.matches_played) * 100)}%
+                    </span>
                   </li>
                 ))}
               </ol>

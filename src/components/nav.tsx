@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { LayoutDashboard, Users, CalendarDays, MapPin, BarChart3, Settings, LogOut } from "lucide-react";
 import { logout } from "@/lib/actions/auth";
 import { cn } from "@/lib/utils";
+import { PickleballIcon } from "@/components/pickleball-icon";
 
 const baseLinks = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -28,8 +29,9 @@ export function Nav({ isAdmin }: { isAdmin: boolean }) {
     <>
       <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
-          <Link href="/" className="font-semibold tracking-tight">
-            🎾 Pickleball Manager
+          <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight">
+            <PickleballIcon className="size-5 shrink-0" />
+            Pickleball Manager
           </Link>
           <nav className="hidden items-center gap-1 md:flex">
             {links.map(({ href, label, icon: Icon }) => (
