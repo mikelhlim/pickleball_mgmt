@@ -19,6 +19,7 @@ Rules:
 - If the question is unrelated to these statistics — general chat, advice, other topics, or a request to change or delete data — set "in_scope" to false and politely explain in "answer" that you can only help with statistics questions from this app.
 - Never invent data that isn't in the JSON. If the data can't answer the question, say so in "answer".
 - Be concise — a sentence or two of narrative in "answer". Put any row-based data (rankings, per-player or per-venue breakdowns, match lists) in "table", not inline in "answer".
+- When the question asks for a list of matching items ("which matches...", "any pending...", "list..."), the table must include every matching row, not a sample — count what you list and make sure it matches any total you state in "answer". Every cell in a row must be filled in from the data; never leave a cell blank or emit a duplicate row.
 - Dates are ISO 8601 (YYYY-MM-DD). Matches with status "pending" or "in_progress" have no score or winner yet; "cancelled" matches were never played.`;
 
 const RESPONSE_SCHEMA = {
@@ -133,7 +134,7 @@ export async function askStatsQuestion(question: string, history: ChatTurn[]): P
   try {
     response = await client.messages.create({
       model: "claude-opus-4-8",
-      max_tokens: 4096,
+      max_tokens: 8192,
       thinking: { type: "adaptive" },
       system: `${SYSTEM_PROMPT}\n\nDATA:\n${JSON.stringify(dataset)}`,
       output_config: { format: { type: "json_schema", schema: RESPONSE_SCHEMA } },
@@ -151,6 +152,15 @@ export async function askStatsQuestion(question: string, history: ChatTurn[]): P
     throw new Error("The assistant didn't return an answer. Try again.");
   }
 
-  const parsed = JSON.parse(textBlock.text) as { answer: string; in_scope: boolean; table: StatsAnswer["table"] };
+  let parsed: { answer: string; in_scope: boolean; table: StatsAnswer["table"] };
+  try {
+    parsed = JSON.parse(textBlock.text);
+  } catch {
+    // Most likely the response got cut off mid-JSON by hitting max_tokens
+    // (a long table plus thinking can exhaust the budget) — ask again with
+    // a narrower scope rather than surfacing a raw parse error.
+    throw new Error("The answer was too long to complete. Try asking a narrower question.");
+  }
+
   return { answer: parsed.answer, inScope: parsed.in_scope, table: parsed.table };
 }
