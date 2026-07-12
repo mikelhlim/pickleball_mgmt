@@ -4,11 +4,12 @@ import { format, parseISO } from "date-fns";
 import { ArrowLeft, Trophy } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { autoEndIfExpired } from "@/lib/game-day-lifecycle";
-import { formatDuration, formatTime } from "@/lib/format";
+import { formatDuration } from "@/lib/format";
 import { computeMatchStats } from "@/lib/stats";
 import { StatsCharts } from "@/components/statistics/stats-charts";
 import { PartnershipTable } from "@/components/statistics/partnership-table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { FormattedTime } from "@/components/ui/formatted-time";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { GameDay, Match, Player, Venue } from "@/lib/types";
@@ -68,8 +69,18 @@ export default async function GameDayStatsPage({
         <p className="text-sm text-muted-foreground">
           {completed.length} of {matchList.length} matches completed
           {venue && <> · {venue.name}</>}
-          {gameDay.started_at && <> · Started {formatTime(gameDay.started_at)}</>}
-          {gameDay.ended_at && <> · Ended {formatTime(gameDay.ended_at)}</>}
+          {gameDay.started_at && (
+            <>
+              {" "}
+              · Started <FormattedTime iso={gameDay.started_at} />
+            </>
+          )}
+          {gameDay.ended_at && (
+            <>
+              {" "}
+              · Ended <FormattedTime iso={gameDay.ended_at} />
+            </>
+          )}
         </p>
       </div>
 
@@ -186,8 +197,17 @@ export default async function GameDayStatsPage({
                 </div>
                 {(match.started_at || match.ended_at) && (
                   <p className="mt-2 text-xs text-muted-foreground">
-                    {match.started_at && <>Started {formatTime(match.started_at)}</>}
-                    {match.ended_at && <> · Ended {formatTime(match.ended_at)}</>}
+                    {match.started_at && (
+                      <>
+                        Started <FormattedTime iso={match.started_at} />
+                      </>
+                    )}
+                    {match.ended_at && (
+                      <>
+                        {" "}
+                        · Ended <FormattedTime iso={match.ended_at} />
+                      </>
+                    )}
                   </p>
                 )}
               </CardContent>

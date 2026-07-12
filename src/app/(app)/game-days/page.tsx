@@ -7,7 +7,8 @@ import { NewGameDayDialog } from "@/components/game-days/new-game-day-dialog";
 import { DeleteGameDayButton } from "@/components/game-days/delete-game-day-button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { formatHoursMinutesBetween, formatTime } from "@/lib/format";
+import { formatHoursMinutesBetween } from "@/lib/format";
+import { FormattedTime } from "@/components/ui/formatted-time";
 import type { GameDay, Venue } from "@/lib/types";
 
 const statusVariant: Record<GameDay["status"], "default" | "secondary" | "outline"> = {
@@ -58,8 +59,18 @@ export default async function GameDaysPage() {
                       {gameDay.venue_id && venuesById.get(gameDay.venue_id) && (
                         <> · {venuesById.get(gameDay.venue_id)!.name}</>
                       )}
-                      {gameDay.started_at && <> · Started {formatTime(gameDay.started_at)}</>}
-                      {gameDay.ended_at && <> · Ended {formatTime(gameDay.ended_at)}</>}
+                      {gameDay.started_at && (
+                        <>
+                          {" "}
+                          · Started <FormattedTime iso={gameDay.started_at} />
+                        </>
+                      )}
+                      {gameDay.ended_at && (
+                        <>
+                          {" "}
+                          · Ended <FormattedTime iso={gameDay.ended_at} />
+                        </>
+                      )}
                       {gameDay.started_at && gameDay.ended_at && (
                         <> · {formatHoursMinutesBetween(gameDay.started_at, gameDay.ended_at)}</>
                       )}

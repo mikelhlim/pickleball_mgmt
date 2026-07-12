@@ -9,7 +9,8 @@ import { RosterPanel } from "@/components/game-days/roster-panel";
 import { MatchCard } from "@/components/game-days/match-card";
 import { EndGameDayDialog } from "@/components/game-days/end-game-day-dialog";
 import { Badge } from "@/components/ui/badge";
-import { formatHoursMinutesBetween, formatTime } from "@/lib/format";
+import { formatHoursMinutesBetween } from "@/lib/format";
+import { FormattedTime } from "@/components/ui/formatted-time";
 import type { GameDay, Match, Player, Venue } from "@/lib/types";
 
 export default async function GameDayDetailPage({
@@ -70,7 +71,12 @@ export default async function GameDayDetailPage({
           <p className="text-sm text-muted-foreground">
             {gameDay.num_matches} matches
             {venue && <> · {venue.name}</>}
-            {gameDay.started_at && <> · Started {formatTime(gameDay.started_at)}</>}
+            {gameDay.started_at && (
+              <>
+                {" "}
+                · Started <FormattedTime iso={gameDay.started_at} />
+              </>
+            )}
             {gameDay.started_at && gameDay.ended_at && (
               <> · {formatHoursMinutesBetween(gameDay.started_at, gameDay.ended_at)}</>
             )}

@@ -7,7 +7,7 @@ import { VenueChart } from "@/components/statistics/venue-chart";
 import { StatsChatbot } from "@/components/statistics/stats-chatbot";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatTime } from "@/lib/format";
+import { FormattedTime } from "@/components/ui/formatted-time";
 import type { GameDay, PartnershipStats, PlayerStats, Venue } from "@/lib/types";
 
 export default async function StatisticsPage() {
@@ -91,7 +91,10 @@ export default async function StatisticsPage() {
               <span>
                 {format(parseISO(gd.session_date), "EEEE, MMMM d, yyyy")}
                 {gd.status === "completed" && gd.ended_at && (
-                  <span className="text-muted-foreground"> · Ended {formatTime(gd.ended_at)}</span>
+                  <span className="text-muted-foreground">
+                  {" "}
+                  · Ended <FormattedTime iso={gd.ended_at} />
+                </span>
                 )}
               </span>
               <Badge variant="outline">{gd.status.replace("_", " ")}</Badge>
