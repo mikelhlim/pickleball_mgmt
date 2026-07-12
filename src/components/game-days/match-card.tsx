@@ -123,19 +123,25 @@ export function MatchCard({
         : 2
       : null;
 
+  // A match left pending when its game day is already completed never got
+  // played — treat it as cancelled for display, same as a match the 4-hour
+  // auto-end explicitly marks cancelled. This covers game days that were
+  // manually ended before that cancellation was recorded on the match row.
+  const isCancelled = match.status === "cancelled" || (match.status === "pending" && locked);
+
   return (
     <Card
       className={
         match.status === "in_progress"
           ? "border-chart-4 bg-chart-4/5 ring-1 ring-chart-4"
-          : match.status === "cancelled"
+          : isCancelled
             ? "opacity-60"
             : ""
       }
     >
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <span className="text-sm font-semibold text-muted-foreground">Match {match.match_number}</span>
-        {match.status === "pending" && <Badge variant="outline">Pending</Badge>}
+        {match.status === "pending" && !isCancelled && <Badge variant="outline">Pending</Badge>}
         {match.status === "in_progress" && (
           <Badge className="bg-chart-4 tabular-nums text-white">Live · {formatDuration(elapsed)}</Badge>
         )}
@@ -144,7 +150,7 @@ export function MatchCard({
             Completed · {match.duration_seconds != null ? formatDuration(match.duration_seconds) : "—"}
           </Badge>
         )}
-        {match.status === "cancelled" && <Badge variant="outline">Cancelled</Badge>}
+        {isCancelled && <Badge variant="outline">Cancelled</Badge>}
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
@@ -188,13 +194,9 @@ export function MatchCard({
           </p>
         )}
 
-        {match.status === "pending" && locked && (
-          <p className="text-sm text-muted-foreground">Not played — game day has ended.</p>
-        )}
-
-        {match.status === "cancelled" && (
+        {isCancelled && (
           <p className="text-sm text-muted-foreground">
-            Cancelled — game day ended automatically after 4 hours.
+            Not played — the game day ended before this match started.
           </p>
         )}
 

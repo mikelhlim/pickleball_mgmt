@@ -108,6 +108,14 @@ export default async function GameDayStatsPage({
             playersById.get(match.team2_player2_id ?? ""),
           ];
 
+          // A match left pending on an already-completed game day never got
+          // played — treat it as cancelled for display, same as a match the
+          // 4-hour auto-end explicitly marks cancelled. Covers game days
+          // that were manually ended before that cancellation was recorded
+          // on the match row.
+          const isCancelled =
+            match.status === "cancelled" || (match.status === "pending" && gameDay.status === "completed");
+
           return (
             <Card
               key={match.id}
@@ -125,7 +133,7 @@ export default async function GameDayStatsPage({
                     ? formatDuration(match.duration_seconds)
                     : match.status === "in_progress"
                       ? "Live"
-                      : match.status === "cancelled"
+                      : isCancelled
                         ? "Cancelled"
                         : "Pending"}
                 </Badge>
