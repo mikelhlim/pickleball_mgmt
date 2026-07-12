@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { autoEndIfExpired } from "@/lib/game-day-lifecycle";
 import { getCurrentRole } from "@/lib/auth-role";
 import { NewGameDayDialog } from "@/components/game-days/new-game-day-dialog";
+import { DeleteGameDayButton } from "@/components/game-days/delete-game-day-button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatHoursMinutesBetween, formatTime } from "@/lib/format";
@@ -18,7 +19,11 @@ const statusVariant: Record<GameDay["status"], "default" | "secondary" | "outlin
 export default async function GameDaysPage() {
   const supabase = await createClient();
   const [{ data: gameDays }, { data: venues }] = await Promise.all([
-    supabase.from("game_days").select("*").order("session_date", { ascending: false }),
+    supabase
+      .from("game_days")
+      .select("*")
+      .order("session_date", { ascending: false })
+      .order("created_at", { ascending: false }),
     supabase.from("venues").select("*").order("name"),
   ]);
 
@@ -41,14 +46,13 @@ export default async function GameDaysPage() {
 
       {sessions.length > 0 ? (
         <div className="space-y-3">
-          {sessions.map((gameDay) => (
-            <Link key={gameDay.id} href={`/game-days/${gameDay.id}`}>
-              <Card className="transition-colors hover:bg-accent/50">
-                <CardContent className="flex items-center justify-between p-4">
-                  <div>
-                    <p className="font-medium">
-                      {format(parseISO(gameDay.session_date), "EEEE, MMMM d, yyyy")}
-                    </p>
+          {sessions.map((gameDay) => {
+            const label = format(parseISO(gameDay.session_date), "EEEE, MMMM d, yyyy");
+            return (
+              <Card key={gameDay.id} className="transition-colors hover:bg-accent/50">
+                <CardContent className="flex items-center justify-between gap-3 p-4">
+                  <Link href={`/game-days/${gameDay.id}`} className="min-w-0 flex-1">
+                    <p className="font-medium">{label}</p>
                     <p className="text-sm text-muted-foreground">
                       {gameDay.num_matches} matches
                       {gameDay.venue_id && venuesById.get(gameDay.venue_id) && (
@@ -60,14 +64,17 @@ export default async function GameDaysPage() {
                         <> · {formatHoursMinutesBetween(gameDay.started_at, gameDay.ended_at)}</>
                       )}
                     </p>
+                  </Link>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <Badge variant={statusVariant[gameDay.status]}>
+                      {gameDay.status.replace("_", " ")}
+                    </Badge>
+                    {isAdmin && <DeleteGameDayButton gameDayId={gameDay.id} label={label} />}
                   </div>
-                  <Badge variant={statusVariant[gameDay.status]}>
-                    {gameDay.status.replace("_", " ")}
-                  </Badge>
                 </CardContent>
               </Card>
-            </Link>
-          ))}
+            );
+          })}
         </div>
       ) : (
         <p className="text-sm text-muted-foreground">No game days yet. Create one to get started.</p>

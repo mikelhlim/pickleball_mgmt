@@ -244,8 +244,7 @@ export async function endGameDay(gameDayId: string) {
   await assertAdmin(supabase);
 
   // A running match would be left with no way to record its result once the
-  // day is closed out, so require it to be ended first. Pending (unplayed)
-  // matches are fine to leave as-is — that's the whole point of this action.
+  // day is closed out, so require it to be ended first.
   const { data: inProgress } = await supabase
     .from("matches")
     .select("id")
@@ -256,6 +255,14 @@ export async function endGameDay(gameDayId: string) {
     throw new Error("Finish the in-progress match before ending the game day.");
   }
 
+  // Any match that never started has no result to lose — cancel it rather
+  // than leaving it pending forever, matching the 4-hour auto-end behavior.
+  await supabase
+    .from("matches")
+    .update({ status: "cancelled" })
+    .eq("game_day_id", gameDayId)
+    .eq("status", "pending");
+
   const { error } = await supabase
     .from("game_days")
     .update({ status: "completed", ended_at: new Date().toISOString() })
@@ -265,4 +272,16 @@ export async function endGameDay(gameDayId: string) {
   revalidatePath(`/game-days/${gameDayId}`);
   revalidatePath("/game-days");
   revalidatePath("/statistics");
+}
+
+export async function deleteGameDay(gameDayId: string) {
+  const supabase = await createClient();
+  await assertAdmin(supabase);
+
+  const { error } = await supabase.from("game_days").delete().eq("id", gameDayId);
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/game-days");
+  revalidatePath("/statistics");
+  revalidatePath("/");
 }
