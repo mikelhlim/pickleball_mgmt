@@ -11,6 +11,7 @@ export type Venue = {
   name: string;
   location: string | null;
   contact_number: string | null;
+  url: string | null;
   created_at: string;
 };
 

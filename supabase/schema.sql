@@ -24,6 +24,7 @@ create table if not exists venues (
   name text not null,
   location text,
   contact_number text,
+  url text,
   created_at timestamptz not null default now()
 );
 
@@ -31,6 +32,7 @@ create table if not exists venues (
 -- before those columns existed.
 alter table venues add column if not exists location text;
 alter table venues add column if not exists contact_number text;
+alter table venues add column if not exists url text;
 
 create table if not exists game_days (
   id uuid primary key default gen_random_uuid(),

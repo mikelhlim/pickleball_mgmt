@@ -9,6 +9,22 @@ const VenueSchema = z.object({
   name: z.string().trim().min(1, "Venue name is required."),
   location: z.string().trim().nullable().optional(),
   contact_number: z.string().trim().nullable().optional(),
+  // Bare domains ("example.com") are common input — treat them as https
+  // rather than rejecting them.
+  url: z
+    .string()
+    .trim()
+    .nullable()
+    .optional()
+    .transform((val, ctx) => {
+      if (!val) return null;
+      const withProtocol = /^https?:\/\//i.test(val) ? val : `https://${val}`;
+      if (!z.string().url().safeParse(withProtocol).success) {
+        ctx.addIssue({ code: "custom", message: "Enter a valid venue website URL." });
+        return z.NEVER;
+      }
+      return withProtocol;
+    }),
 });
 
 export type VenueFormState =
@@ -23,6 +39,7 @@ export async function createVenue(
     name: formData.get("name"),
     location: formData.get("location"),
     contact_number: formData.get("contact_number"),
+    url: formData.get("url"),
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid input." };
 
@@ -39,6 +56,7 @@ export async function createVenue(
       name: parsed.data.name,
       location: parsed.data.location || null,
       contact_number: parsed.data.contact_number || null,
+      url: parsed.data.url,
     })
     .select("id, name")
     .single();
@@ -60,6 +78,7 @@ export async function updateVenue(
     name: formData.get("name"),
     location: formData.get("location"),
     contact_number: formData.get("contact_number"),
+    url: formData.get("url"),
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid input." };
 
@@ -76,6 +95,7 @@ export async function updateVenue(
       name: parsed.data.name,
       location: parsed.data.location || null,
       contact_number: parsed.data.contact_number || null,
+      url: parsed.data.url,
     })
     .eq("id", id);
   if (error) return { error: error.message };

@@ -86,6 +86,18 @@ export function VenueDialog({ mode, venue }: { mode: "create" | "edit"; venue?: 
               defaultValue={venue?.contact_number ?? ""}
             />
           </div>
+          <div className="space-y-2">
+            <Label htmlFor="url">Website</Label>
+            <Input
+              key={venue?.url}
+              id="url"
+              name="url"
+              type="text"
+              inputMode="url"
+              placeholder="Optional — e.g. example.com"
+              defaultValue={venue?.url ?? ""}
+            />
+          </div>
           <DialogFooter>
             <Button type="submit" disabled={isPending}>
               {isPending ? "Saving..." : "Save"}
