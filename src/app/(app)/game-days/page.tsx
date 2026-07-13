@@ -42,7 +42,7 @@ export default async function GameDaysPage() {
           <h1 className="text-3xl font-bold tracking-tight">Game Days</h1>
           <p className="text-sm text-muted-foreground">Create and run open-play sessions.</p>
         </div>
-        {isAdmin && <NewGameDayDialog venues={(venues ?? []) as Venue[]} />}
+        <NewGameDayDialog venues={(venues ?? []) as Venue[]} />
       </div>
 
       {sessions.length > 0 ? (

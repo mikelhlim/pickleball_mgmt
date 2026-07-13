@@ -33,6 +33,20 @@ export async function assertAdmin(supabase: SupabaseServerClient): Promise<void>
   }
 }
 
+// Weaker sibling of assertAdmin: for actions any signed-in user (admin or
+// viewer) may take — running a game day (create, roster, schedule,
+// start/end matches) but not deleting one. Every page behind this app's
+// proxy already requires auth, so in practice this mainly guards Server
+// Actions invoked directly as untrusted POST endpoints.
+export async function assertAuthenticated(supabase: SupabaseServerClient): Promise<void> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    throw new Error("You must be signed in to do this.");
+  }
+}
+
 // Page guard: redirects a viewer away from an admin-only page entirely,
 // rather than rendering it and hiding pieces of it.
 export async function requireAdminPage(supabase: SupabaseServerClient): Promise<void> {

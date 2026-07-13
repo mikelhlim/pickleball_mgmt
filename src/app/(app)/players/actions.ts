@@ -8,6 +8,8 @@ import { assertAdmin } from "@/lib/auth-role";
 const PlayerSchema = z.object({
   name: z.string().trim().min(1, "Name is required."),
   nickname: z.string().trim().optional(),
+  email: z.string().trim().toLowerCase().email("Enter a valid email address.").optional().or(z.literal("")),
+  phone: z.string().trim().optional(),
 });
 
 export type PlayerFormState = { error?: string; success?: boolean } | undefined;
@@ -37,6 +39,8 @@ export async function createPlayer(
   const parsed = PlayerSchema.safeParse({
     name: formData.get("name"),
     nickname: formData.get("nickname"),
+    email: formData.get("email"),
+    phone: formData.get("phone"),
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid input." };
 
@@ -57,6 +61,8 @@ export async function createPlayer(
   const { error } = await supabase.from("players").insert({
     name: parsed.data.name,
     nickname: parsed.data.nickname || null,
+    email: parsed.data.email || null,
+    phone: parsed.data.phone || null,
     photo_url: photoUrl,
   });
   if (error) return { error: error.message };
@@ -75,6 +81,8 @@ export async function updatePlayer(
   const parsed = PlayerSchema.safeParse({
     name: formData.get("name"),
     nickname: formData.get("nickname"),
+    email: formData.get("email"),
+    phone: formData.get("phone"),
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid input." };
 
@@ -97,6 +105,8 @@ export async function updatePlayer(
     .update({
       name: parsed.data.name,
       nickname: parsed.data.nickname || null,
+      email: parsed.data.email || null,
+      phone: parsed.data.phone || null,
       ...(photoUrl ? { photo_url: photoUrl } : {}),
     })
     .eq("id", id);

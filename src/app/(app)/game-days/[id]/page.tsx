@@ -51,8 +51,10 @@ export default async function GameDayDetailPage({
   const availablePlayers = players.filter((p) => !rosterIds.has(p.id));
 
   const matchList = (matches ?? []) as Match[];
-  const canEditRoster =
-    isAdmin && gameDay.status !== "completed" && matchList.every((m) => m.status === "pending");
+  // Any signed-in user can build the roster and generate the schedule —
+  // only deleting/ending a game day outright stays admin-only (isAdmin,
+  // used below for EndGameDayDialog).
+  const canEditRoster = gameDay.status !== "completed" && matchList.every((m) => m.status === "pending");
 
   return (
     <div className="space-y-6">
@@ -137,7 +139,7 @@ export default async function GameDayDetailPage({
                   ]}
                   sittingOut={sittingOut}
                   locked={gameDay.status === "completed"}
-                  isAdmin={isAdmin}
+                  canManageMatch
                 />
               );
             })}

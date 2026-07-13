@@ -4,11 +4,11 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { generateOrderOfPlay } from "@/lib/scheduler";
-import { assertAdmin } from "@/lib/auth-role";
+import { assertAdmin, assertAuthenticated } from "@/lib/auth-role";
 
 export async function addPlayerToRoster(gameDayId: string, playerId: string) {
   const supabase = await createClient();
-  await assertAdmin(supabase);
+  await assertAuthenticated(supabase);
   const { error } = await supabase
     .from("game_day_players")
     .insert({ game_day_id: gameDayId, player_id: playerId });
@@ -19,7 +19,7 @@ export async function addPlayerToRoster(gameDayId: string, playerId: string) {
 
 export async function addAllPlayersToRoster(gameDayId: string) {
   const supabase = await createClient();
-  await assertAdmin(supabase);
+  await assertAuthenticated(supabase);
 
   const [{ data: allPlayers }, { data: rosterRows }] = await Promise.all([
     supabase.from("players").select("id"),
@@ -43,7 +43,7 @@ export async function addAllPlayersToRoster(gameDayId: string) {
 
 export async function removePlayerFromRoster(gameDayId: string, playerId: string) {
   const supabase = await createClient();
-  await assertAdmin(supabase);
+  await assertAuthenticated(supabase);
   const { error } = await supabase
     .from("game_day_players")
     .delete()
@@ -73,7 +73,7 @@ export async function registerAndAddPlayer(
 
   const supabase = await createClient();
   try {
-    await assertAdmin(supabase);
+    await assertAuthenticated(supabase);
   } catch (e) {
     return { error: e instanceof Error ? e.message : "Not allowed." };
   }
@@ -109,7 +109,7 @@ export async function generateSchedule(
 
   const supabase = await createClient();
   try {
-    await assertAdmin(supabase);
+    await assertAuthenticated(supabase);
   } catch (e) {
     return { error: e instanceof Error ? e.message : "Not allowed." };
   }
@@ -168,7 +168,7 @@ export async function generateSchedule(
 
 export async function startMatch(matchId: string, gameDayId: string) {
   const supabase = await createClient();
-  await assertAdmin(supabase);
+  await assertAuthenticated(supabase);
   const now = new Date().toISOString();
 
   const { error } = await supabase
@@ -196,7 +196,7 @@ export async function endMatch(
   const winnerTeam: 1 | 2 = team1Score > team2Score ? 1 : 2;
 
   const supabase = await createClient();
-  await assertAdmin(supabase);
+  await assertAuthenticated(supabase);
 
   const { data: match, error: fetchError } = await supabase
     .from("matches")

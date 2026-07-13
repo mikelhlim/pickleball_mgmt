@@ -3,6 +3,8 @@ export type Player = {
   name: string;
   nickname: string | null;
   photo_url: string | null;
+  email: string | null;
+  phone: string | null;
   created_at: string;
 };
 
@@ -12,6 +14,7 @@ export type Venue = {
   location: string | null;
   contact_number: string | null;
   url: string | null;
+  email: string | null;
   created_at: string;
 };
 

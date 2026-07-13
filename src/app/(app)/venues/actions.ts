@@ -25,6 +25,13 @@ const VenueSchema = z.object({
       }
       return withProtocol;
     }),
+  email: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .nullable()
+    .optional()
+    .refine((val) => !val || z.string().email().safeParse(val).success, "Enter a valid venue email address."),
 });
 
 export type VenueFormState =
@@ -40,6 +47,7 @@ export async function createVenue(
     location: formData.get("location"),
     contact_number: formData.get("contact_number"),
     url: formData.get("url"),
+    email: formData.get("email"),
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid input." };
 
@@ -57,6 +65,7 @@ export async function createVenue(
       location: parsed.data.location || null,
       contact_number: parsed.data.contact_number || null,
       url: parsed.data.url,
+      email: parsed.data.email || null,
     })
     .select("id, name")
     .single();
@@ -79,6 +88,7 @@ export async function updateVenue(
     location: formData.get("location"),
     contact_number: formData.get("contact_number"),
     url: formData.get("url"),
+    email: formData.get("email"),
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid input." };
 
@@ -96,6 +106,7 @@ export async function updateVenue(
       location: parsed.data.location || null,
       contact_number: parsed.data.contact_number || null,
       url: parsed.data.url,
+      email: parsed.data.email || null,
     })
     .eq("id", id);
   if (error) return { error: error.message };

@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { Globe, MapPin, Phone, Trash2 } from "lucide-react";
+import { Globe, Mail, MapPin, Phone, Trash2 } from "lucide-react";
 import { deleteVenue } from "@/app/(app)/venues/actions";
 import { VenueDialog } from "./venue-dialog";
 import { Card, CardContent } from "@/components/ui/card";
@@ -66,6 +66,12 @@ export function VenueCard({ venue, isAdmin = false }: { venue: Venue; isAdmin?: 
               <Globe className="size-3 shrink-0" />
               {venue.url.replace(/^https?:\/\//, "")}
             </a>
+          )}
+          {venue.email && (
+            <p className="flex items-center gap-1 truncate text-xs text-muted-foreground">
+              <Mail className="size-3 shrink-0" />
+              {venue.email}
+            </p>
           )}
         </div>
         {isAdmin && (

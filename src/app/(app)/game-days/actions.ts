@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { assertAdmin } from "@/lib/auth-role";
+import { assertAuthenticated } from "@/lib/auth-role";
 
 const GameDaySchema = z.object({
   session_date: z.string().min(1, "Date is required."),
@@ -27,7 +27,7 @@ export async function createGameDay(
 
   const supabase = await createClient();
   try {
-    await assertAdmin(supabase);
+    await assertAuthenticated(supabase);
   } catch (e) {
     return { error: e instanceof Error ? e.message : "Not allowed." };
   }

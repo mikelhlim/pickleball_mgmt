@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Trash2 } from "lucide-react";
+import { Mail, Phone, Trash2 } from "lucide-react";
 import { deletePlayer } from "@/app/(app)/players/actions";
 import { PlayerDialog } from "./player-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -60,6 +60,18 @@ export function PlayerCard({
             <p className="truncate font-medium hover:underline">{player.name}</p>
             {player.nickname && (
               <p className="truncate text-sm text-muted-foreground">&ldquo;{player.nickname}&rdquo;</p>
+            )}
+            {player.email && (
+              <p className="flex items-center gap-1 truncate text-xs text-muted-foreground">
+                <Mail className="size-3 shrink-0" />
+                {player.email}
+              </p>
+            )}
+            {player.phone && (
+              <p className="flex items-center gap-1 truncate text-xs text-muted-foreground">
+                <Phone className="size-3 shrink-0" />
+                {player.phone}
+              </p>
             )}
             {wins + losses > 0 && (
               <p className="text-xs text-muted-foreground tabular-nums">

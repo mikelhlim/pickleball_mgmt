@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { format, parseISO } from "date-fns";
-import { ArrowLeft, Trophy } from "lucide-react";
+import { ArrowLeft, Mail, Phone, Trophy } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { computeMatchStats } from "@/lib/stats";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -114,6 +114,22 @@ export default async function PlayerProfilePage({
           <div>
             <h1 className="text-3xl font-bold tracking-tight">{player.name}</h1>
             {player.nickname && <p className="text-sm text-muted-foreground">&ldquo;{player.nickname}&rdquo;</p>}
+            {(player.email || player.phone) && (
+              <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+                {player.email && (
+                  <span className="flex items-center gap-1">
+                    <Mail className="size-3.5" />
+                    {player.email}
+                  </span>
+                )}
+                {player.phone && (
+                  <span className="flex items-center gap-1">
+                    <Phone className="size-3.5" />
+                    {player.phone}
+                  </span>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>

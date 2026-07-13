@@ -64,7 +64,7 @@ export function MatchCard({
   team2,
   sittingOut,
   locked = false,
-  isAdmin = false,
+  canManageMatch = false,
 }: {
   match: Match;
   gameDayId: string;
@@ -72,7 +72,7 @@ export function MatchCard({
   team2: [Player | null, Player | null];
   sittingOut: Player[];
   locked?: boolean;
-  isAdmin?: boolean;
+  canManageMatch?: boolean;
 }) {
   const [isPending, startTransition] = useTransition();
   const [endDialogOpen, setEndDialogOpen] = useState(false);
@@ -200,14 +200,14 @@ export function MatchCard({
           </p>
         )}
 
-        {match.status === "pending" && !locked && isAdmin && (
+        {match.status === "pending" && !locked && canManageMatch && (
           <Button onClick={handleStart} disabled={isPending} className="w-full">
             <Play className="size-4" />
             Start Match
           </Button>
         )}
 
-        {match.status === "in_progress" && isAdmin && (
+        {match.status === "in_progress" && canManageMatch && (
           <Dialog open={endDialogOpen} onOpenChange={setEndDialogOpen}>
             <DialogTrigger render={<Button variant="secondary" className="w-full" />}>
               End Match

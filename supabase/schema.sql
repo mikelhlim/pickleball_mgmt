@@ -16,6 +16,8 @@ create table if not exists players (
   name text not null,
   nickname text,
   photo_url text,
+  email text,
+  phone text,
   created_at timestamptz not null default now()
 );
 
@@ -25,14 +27,18 @@ create table if not exists venues (
   location text,
   contact_number text,
   url text,
+  email text,
   created_at timestamptz not null default now()
 );
 
 -- Adds columns when re-running this script against a database created
 -- before those columns existed.
+alter table players add column if not exists email text;
+alter table players add column if not exists phone text;
 alter table venues add column if not exists location text;
 alter table venues add column if not exists contact_number text;
 alter table venues add column if not exists url text;
+alter table venues add column if not exists email text;
 
 create table if not exists game_days (
   id uuid primary key default gen_random_uuid(),
@@ -93,11 +99,14 @@ create index if not exists idx_game_days_venue on game_days (venue_id);
 
 -- ============================================================================
 -- Row Level Security
--- Two tiers: any authenticated user may read everything (view access), but
--- writes (insert/update/delete) require the admin role. A user's role lives
--- in their JWT's app_metadata.role; missing/null defaults to admin, so
--- accounts that existed before roles were introduced keep full access
--- without needing a data migration.
+-- Any authenticated user may read everything (view access). Running a game
+-- day — creating one, managing its roster, generating the schedule, and
+-- starting/ending matches — is also open to any signed-in user; only
+-- deleting a game day, and managing players/venues outside the roster
+-- flow, require the admin role. A user's role lives in their JWT's
+-- app_metadata.role; missing/null defaults to admin, so accounts that
+-- existed before roles were introduced keep full access without needing a
+-- data migration.
 -- ============================================================================
 
 create or replace function public.is_admin()
@@ -117,8 +126,16 @@ alter table matches enable row level security;
 drop policy if exists "authenticated full access" on players;
 drop policy if exists "authenticated read" on players;
 drop policy if exists "admin write" on players;
+drop policy if exists "authenticated insert" on players;
 create policy "authenticated read" on players
   for select using (auth.uid() is not null);
+-- Registering a brand-new player from the game-day roster panel is open to
+-- any signed-in user; editing/deleting an existing player stays admin-only
+-- via "admin write" below (a permissive insert policy here doesn't relax
+-- that — Postgres OR's separate policies per command, so update/delete
+-- still require is_admin()).
+create policy "authenticated insert" on players
+  for insert with check (auth.uid() is not null);
 create policy "admin write" on players
   for all using (public.is_admin()) with check (public.is_admin());
 
@@ -133,26 +150,40 @@ create policy "admin write" on venues
 drop policy if exists "authenticated full access" on game_days;
 drop policy if exists "authenticated read" on game_days;
 drop policy if exists "admin write" on game_days;
+drop policy if exists "authenticated insert" on game_days;
+drop policy if exists "authenticated update" on game_days;
 create policy "authenticated read" on game_days
   for select using (auth.uid() is not null);
+-- Any signed-in user can create and run a session (starting/ending matches
+-- updates status, started_at, ended_at); deleting one stays admin-only via
+-- "admin write" below.
+create policy "authenticated insert" on game_days
+  for insert with check (auth.uid() is not null);
+create policy "authenticated update" on game_days
+  for update using (auth.uid() is not null) with check (auth.uid() is not null);
 create policy "admin write" on game_days
   for all using (public.is_admin()) with check (public.is_admin());
 
 drop policy if exists "authenticated full access" on game_day_players;
 drop policy if exists "authenticated read" on game_day_players;
 drop policy if exists "admin write" on game_day_players;
+drop policy if exists "authenticated write" on game_day_players;
 create policy "authenticated read" on game_day_players
   for select using (auth.uid() is not null);
-create policy "admin write" on game_day_players
-  for all using (public.is_admin()) with check (public.is_admin());
+-- Roster membership is managed by anyone who can run a game day.
+create policy "authenticated write" on game_day_players
+  for all using (auth.uid() is not null) with check (auth.uid() is not null);
 
 drop policy if exists "authenticated full access" on matches;
 drop policy if exists "authenticated read" on matches;
 drop policy if exists "admin write" on matches;
+drop policy if exists "authenticated write" on matches;
 create policy "authenticated read" on matches
   for select using (auth.uid() is not null);
-create policy "admin write" on matches
-  for all using (public.is_admin()) with check (public.is_admin());
+-- Generating/regenerating the schedule and starting/ending matches are
+-- available to anyone who can run a game day.
+create policy "authenticated write" on matches
+  for all using (auth.uid() is not null) with check (auth.uid() is not null);
 
 -- ============================================================================
 -- Statistics views

@@ -165,6 +165,28 @@ export function PlayerDialog({ mode, player }: { mode: "create" | "edit"; player
               defaultValue={player?.nickname ?? ""}
             />
           </div>
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <Input
+              key={player?.email}
+              id="email"
+              name="email"
+              type="email"
+              placeholder="Optional"
+              defaultValue={player?.email ?? ""}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="phone">Phone number</Label>
+            <Input
+              key={player?.phone}
+              id="phone"
+              name="phone"
+              type="tel"
+              placeholder="Optional"
+              defaultValue={player?.phone ?? ""}
+            />
+          </div>
           <DialogFooter>
             <Button type="submit" disabled={isPending || isProcessingPhoto}>
               {isPending ? "Saving..." : "Save"}

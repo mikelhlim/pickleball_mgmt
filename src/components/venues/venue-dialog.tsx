@@ -98,6 +98,17 @@ export function VenueDialog({ mode, venue }: { mode: "create" | "edit"; venue?: 
               defaultValue={venue?.url ?? ""}
             />
           </div>
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <Input
+              key={venue?.email}
+              id="email"
+              name="email"
+              type="email"
+              placeholder="Optional"
+              defaultValue={venue?.email ?? ""}
+            />
+          </div>
           <DialogFooter>
             <Button type="submit" disabled={isPending}>
               {isPending ? "Saving..." : "Save"}
