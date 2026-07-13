@@ -1,12 +1,16 @@
 import Link from "next/link";
-import { BarChart3, CalendarDays, Trophy, Users } from "lucide-react";
+import { BarChart3, CalendarClock, CalendarDays, Trophy, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SessionScroller, type SessionGroup } from "@/components/dashboard/session-scroller";
-import type { GameDay, PartnershipStats, PlayerStats, Venue } from "@/lib/types";
+import { autoPromoteDueScheduledSessions } from "@/lib/scheduled-game-day-promotion";
+import { ScheduledSessionsList } from "@/components/schedule/scheduled-sessions-list";
+import type { ScheduledSessionWithRoster } from "@/components/schedule/scheduled-session-dialog";
+import type { GameDay, PartnershipStats, Player, PlayerStats, ScheduledGameDay, Venue } from "@/lib/types";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
+  await autoPromoteDueScheduledSessions(supabase);
 
   const [
     { count: playerCount },
@@ -15,6 +19,8 @@ export default async function DashboardPage() {
     { data: topPartnerships },
     { data: players },
     { data: venues },
+    { data: upcomingSessions },
+    { data: scheduledRosterRows },
   ] = await Promise.all([
     supabase.from("players").select("*", { count: "exact", head: true }),
     supabase
@@ -25,8 +31,16 @@ export default async function DashboardPage() {
       .limit(15),
     supabase.from("player_stats").select("*").gt("matches_played", 0),
     supabase.from("partnership_stats").select("*").gt("matches_played", 0),
-    supabase.from("players").select("id, name, nickname"),
+    supabase.from("players").select("*"),
     supabase.from("venues").select("*"),
+    supabase
+      .from("scheduled_game_days")
+      .select("*")
+      .is("promoted_game_day_id", null)
+      .order("session_date", { ascending: true })
+      .order("session_time", { ascending: true })
+      .limit(5),
+    supabase.from("scheduled_game_day_players").select("scheduled_game_day_id, player_id"),
   ]);
 
   const winPct = (wins: number, matchesPlayed: number) => (matchesPlayed > 0 ? wins / matchesPlayed : 0);
@@ -52,13 +66,23 @@ export default async function DashboardPage() {
       : { data: [] as { game_day_id: string; match_number: number }[] };
 
   const liveMatchByGameDay = new Map((liveMatches ?? []).map((m) => [m.game_day_id, m.match_number]));
-  const venuesById = new Map(((venues ?? []) as Venue[]).map((v) => [v.id, v]));
-  const nameById = new Map(
-    (players ?? []).map((p: { id: string; name: string; nickname: string | null }) => [
-      p.id,
-      p.nickname || p.name,
-    ])
-  );
+  const venueList = (venues ?? []) as Venue[];
+  const playerList = (players ?? []) as Player[];
+  const venuesById = new Map(venueList.map((v) => [v.id, v]));
+  const nameById = new Map(playerList.map((p) => [p.id, p.nickname || p.name]));
+
+  const scheduledRosterBySession = new Map<string, string[]>();
+  for (const row of scheduledRosterRows ?? []) {
+    const list = scheduledRosterBySession.get(row.scheduled_game_day_id) ?? [];
+    list.push(row.player_id);
+    scheduledRosterBySession.set(row.scheduled_game_day_id, list);
+  }
+  const upcomingSessionsWithRoster: ScheduledSessionWithRoster[] = (
+    (upcomingSessions ?? []) as ScheduledGameDay[]
+  ).map((session) => ({
+    ...session,
+    playerIds: scheduledRosterBySession.get(session.id) ?? [],
+  }));
 
   const groups: SessionGroup[] = [];
   for (const gd of gameDays) {
@@ -84,7 +108,7 @@ export default async function DashboardPage() {
         <p className="text-sm text-muted-foreground">Quick overview of your pickleball club.</p>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardContent className="flex items-center gap-4 p-6">
             <Users className="size-8 text-muted-foreground" />
@@ -105,6 +129,17 @@ export default async function DashboardPage() {
             </CardContent>
           </Card>
         </Link>
+        <Link href="/schedule">
+          <Card className="h-full transition-colors hover:bg-accent/50">
+            <CardContent className="flex items-center gap-4 p-6">
+              <CalendarClock className="size-8 text-muted-foreground" />
+              <div>
+                <p className="text-sm font-medium">Schedule</p>
+                <p className="text-sm text-muted-foreground">Plan a future session</p>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
         <Link href="/statistics">
           <Card className="h-full transition-colors hover:bg-accent/50">
             <CardContent className="flex items-center gap-4 p-6">
@@ -117,6 +152,19 @@ export default async function DashboardPage() {
           </Card>
         </Link>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Upcoming Sessions</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ScheduledSessionsList
+            sessions={upcomingSessionsWithRoster}
+            venues={venueList}
+            players={playerList}
+          />
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Card>

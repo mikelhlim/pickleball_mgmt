@@ -2,6 +2,7 @@ import Link from "next/link";
 import { format, parseISO } from "date-fns";
 import { createClient } from "@/lib/supabase/server";
 import { autoEndIfExpired } from "@/lib/game-day-lifecycle";
+import { autoPromoteDueScheduledSessions } from "@/lib/scheduled-game-day-promotion";
 import { getCurrentRole } from "@/lib/auth-role";
 import { NewGameDayDialog } from "@/components/game-days/new-game-day-dialog";
 import { DeleteGameDayButton } from "@/components/game-days/delete-game-day-button";
@@ -19,6 +20,7 @@ const statusVariant: Record<GameDay["status"], "default" | "secondary" | "outlin
 
 export default async function GameDaysPage() {
   const supabase = await createClient();
+  await autoPromoteDueScheduledSessions(supabase);
   const [{ data: gameDays }, { data: venues }] = await Promise.all([
     supabase
       .from("game_days")

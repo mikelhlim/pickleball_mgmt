@@ -97,6 +97,33 @@ create index if not exists idx_game_day_players_player on game_day_players (play
 create index if not exists idx_matches_game_day on matches (game_day_id);
 create index if not exists idx_game_days_venue on game_days (venue_id);
 
+-- A planned future session: date, time, venue, and roster set in advance.
+-- promoted_game_day_id is null until src/lib/scheduled-game-day-promotion.ts
+-- turns it into a real game_days row at its scheduled time — it then both
+-- marks the session as done and links to the resulting game day. Cascading
+-- the delete (rather than setting null) matters: a past-due session with a
+-- null promoted_game_day_id looks unpromoted again, so if it weren't
+-- cascaded, deleting the game day would make the lazy promotion check
+-- recreate it on the next page load.
+create table if not exists scheduled_game_days (
+  id uuid primary key default gen_random_uuid(),
+  session_date date not null,
+  session_time time not null,
+  num_matches integer not null default 12 check (num_matches > 0),
+  venue_id uuid references venues (id) on delete set null,
+  promoted_game_day_id uuid references game_days (id) on delete cascade,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists scheduled_game_day_players (
+  scheduled_game_day_id uuid not null references scheduled_game_days (id) on delete cascade,
+  player_id uuid not null references players (id) on delete cascade,
+  primary key (scheduled_game_day_id, player_id)
+);
+
+create index if not exists idx_scheduled_game_days_date on scheduled_game_days (session_date);
+create index if not exists idx_scheduled_game_day_players_scheduled on scheduled_game_day_players (scheduled_game_day_id);
+
 -- ============================================================================
 -- Row Level Security
 -- Any authenticated user may read everything (view access). Running a game
@@ -179,6 +206,25 @@ create policy "authenticated read" on matches
 -- Generating/regenerating the schedule and starting/ending matches are
 -- available to anyone who can run a game day.
 create policy "authenticated write" on matches
+  for all using (auth.uid() is not null) with check (auth.uid() is not null);
+
+alter table scheduled_game_days enable row level security;
+alter table scheduled_game_day_players enable row level security;
+
+drop policy if exists "authenticated read" on scheduled_game_days;
+drop policy if exists "authenticated write" on scheduled_game_days;
+create policy "authenticated read" on scheduled_game_days
+  for select using (auth.uid() is not null);
+-- Scheduling a session is open to any signed-in user, same as creating a
+-- game day directly.
+create policy "authenticated write" on scheduled_game_days
+  for all using (auth.uid() is not null) with check (auth.uid() is not null);
+
+drop policy if exists "authenticated read" on scheduled_game_day_players;
+drop policy if exists "authenticated write" on scheduled_game_day_players;
+create policy "authenticated read" on scheduled_game_day_players
+  for select using (auth.uid() is not null);
+create policy "authenticated write" on scheduled_game_day_players
   for all using (auth.uid() is not null) with check (auth.uid() is not null);
 
 -- ============================================================================

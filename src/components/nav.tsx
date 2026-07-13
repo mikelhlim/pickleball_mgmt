@@ -2,7 +2,16 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, CalendarDays, MapPin, BarChart3, Settings, LogOut } from "lucide-react";
+import {
+  LayoutDashboard,
+  Users,
+  CalendarDays,
+  CalendarClock,
+  MapPin,
+  BarChart3,
+  Settings,
+  LogOut,
+} from "lucide-react";
 import { logout } from "@/lib/actions/auth";
 import { cn } from "@/lib/utils";
 import { PickleballIcon } from "@/components/pickleball-icon";
@@ -11,6 +20,7 @@ const baseLinks = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/players", label: "Players", icon: Users },
   { href: "/game-days", label: "Game Days", icon: CalendarDays },
+  { href: "/schedule", label: "Schedule", icon: CalendarClock },
   { href: "/venues", label: "Venues", icon: MapPin },
   { href: "/statistics", label: "Statistics", icon: BarChart3 },
 ];
