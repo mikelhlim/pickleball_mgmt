@@ -48,8 +48,8 @@ export default async function AdminPage() {
         <CardHeader>
           <CardTitle>Delete All Game Data</CardTitle>
           <CardDescription>
-            Permanently deletes every game day, roster, and match record. Registered players and venues
-            are kept. This cannot be undone.
+            Permanently deletes every game day, roster, and match record. Registered players, venues, and
+            upcoming scheduled sessions are kept. This cannot be undone.
           </CardDescription>
         </CardHeader>
         <CardContent>

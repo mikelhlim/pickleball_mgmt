@@ -5,6 +5,7 @@ import { format, parseISO } from "date-fns";
 import { CalendarClock, MapPin, Users } from "lucide-react";
 import { formatTimeOfDay } from "@/lib/format";
 import { ScheduledSessionDialog, type ScheduledSessionWithRoster } from "./scheduled-session-dialog";
+import { DeleteScheduledSessionButton } from "./delete-scheduled-session-button";
 import type { Player, Venue } from "@/lib/types";
 
 export function ScheduledSessionsList({
@@ -30,35 +31,32 @@ export function ScheduledSessionsList({
       <ul className="divide-y">
         {sessions.map((session) => {
           const venue = session.venue_id ? venuesById.get(session.venue_id) : null;
+          const label = `${format(parseISO(session.session_date), "EEE, MMM d")} · ${formatTimeOfDay(session.session_time)}`;
           return (
-            <li key={session.id}>
+            <li key={session.id} className="flex items-center justify-between gap-2">
               <button
                 type="button"
                 onClick={() => setEditing(session)}
-                className="flex w-full items-center justify-between gap-4 py-3 text-left transition-colors hover:bg-accent/50"
+                className="-mx-2 flex min-w-0 flex-1 items-center gap-3 rounded-md px-2 py-3 text-left transition-colors hover:bg-accent/50"
               >
-                <div className="flex items-center gap-3">
-                  <CalendarClock className="size-5 shrink-0 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm font-medium">
-                      {format(parseISO(session.session_date), "EEE, MMM d")} &middot;{" "}
-                      {formatTimeOfDay(session.session_time)}
-                    </p>
-                    <div className="flex flex-wrap items-center gap-x-3 text-xs text-muted-foreground">
-                      {venue && (
-                        <span className="flex items-center gap-1">
-                          <MapPin className="size-3" />
-                          {venue.name}
-                        </span>
-                      )}
+                <CalendarClock className="size-5 shrink-0 text-muted-foreground" />
+                <div className="min-w-0">
+                  <p className="text-sm font-medium">{label}</p>
+                  <div className="flex flex-wrap items-center gap-x-3 text-xs text-muted-foreground">
+                    {venue && (
                       <span className="flex items-center gap-1">
-                        <Users className="size-3" />
-                        {session.playerIds.length} player{session.playerIds.length === 1 ? "" : "s"}
+                        <MapPin className="size-3" />
+                        {venue.name}
                       </span>
-                    </div>
+                    )}
+                    <span className="flex items-center gap-1">
+                      <Users className="size-3" />
+                      {session.playerIds.length} player{session.playerIds.length === 1 ? "" : "s"}
+                    </span>
                   </div>
                 </div>
               </button>
+              <DeleteScheduledSessionButton sessionId={session.id} label={label} />
             </li>
           );
         })}

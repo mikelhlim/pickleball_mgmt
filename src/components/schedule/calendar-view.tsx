@@ -7,8 +7,10 @@ import {
   endOfMonth,
   endOfWeek,
   format,
+  isBefore,
   isSameMonth,
   isToday,
+  startOfDay,
   startOfMonth,
   startOfWeek,
   subMonths,
@@ -24,10 +26,12 @@ const WEEKDAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 export function CalendarView({
   sessions,
+  markedDates,
   venues,
   players,
 }: {
   sessions: ScheduledSessionWithRoster[];
+  markedDates: string[];
   venues: Venue[];
   players: Player[];
 }) {
@@ -38,12 +42,15 @@ export function CalendarView({
   } | null>(null);
 
   const sessionsByDate = new Map(sessions.map((s) => [s.session_date, s]));
+  const markedDateSet = new Set(markedDates);
+  const today = startOfDay(new Date());
 
   const gridStart = startOfWeek(startOfMonth(month));
   const gridEnd = endOfWeek(endOfMonth(month));
   const days = eachDayOfInterval({ start: gridStart, end: gridEnd });
 
   function handleDayClick(day: Date) {
+    if (isBefore(day, today)) return;
     const key = format(day, "yyyy-MM-dd");
     setDialogState({ date: key, session: sessionsByDate.get(key) });
   }
@@ -85,21 +92,23 @@ export function CalendarView({
           <div className="grid grid-cols-7 gap-1">
             {days.map((day) => {
               const key = format(day, "yyyy-MM-dd");
-              const session = sessionsByDate.get(key);
               const inMonth = isSameMonth(day, month);
+              const isPast = isBefore(day, today);
               return (
                 <button
                   key={key}
                   type="button"
                   onClick={() => handleDayClick(day)}
+                  disabled={isPast}
                   className={cn(
                     "flex aspect-square flex-col items-center justify-center gap-1 rounded-md text-sm transition-colors hover:bg-accent",
                     !inMonth && "text-muted-foreground/40",
-                    isToday(day) && "font-semibold text-primary"
+                    isToday(day) && "font-semibold text-primary",
+                    isPast && "cursor-not-allowed text-muted-foreground/40 hover:bg-transparent"
                   )}
                 >
                   {format(day, "d")}
-                  {session && <span className="size-1.5 rounded-full bg-primary" />}
+                  {markedDateSet.has(key) && <span className="size-1.5 rounded-full bg-primary" />}
                 </button>
               );
             })}

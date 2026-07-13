@@ -13,6 +13,9 @@ export async function deleteAllGameData() {
   // Supabase requires a filter on delete; this matches every row since no
   // real game day will ever have this id. game_day_players and matches
   // cascade via their foreign keys — players and venues are untouched.
+  // scheduled_game_days rows cascade too, but only ones already promoted
+  // into a game day being deleted here; still-upcoming scheduled sessions
+  // have no game_days reference yet, so they're untouched.
   const { error } = await supabase
     .from("game_days")
     .delete()

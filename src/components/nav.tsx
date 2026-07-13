@@ -20,7 +20,7 @@ const baseLinks = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/players", label: "Players", icon: Users },
   { href: "/game-days", label: "Game Days", icon: CalendarDays },
-  { href: "/schedule", label: "Schedule", icon: CalendarClock },
+  { href: "/schedule", label: "Calendar", icon: CalendarClock },
   { href: "/venues", label: "Venues", icon: MapPin },
   { href: "/statistics", label: "Statistics", icon: BarChart3 },
 ];

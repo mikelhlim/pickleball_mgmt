@@ -4,13 +4,18 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { assertAuthenticated } from "@/lib/auth-role";
+import { clubTodayDateString } from "@/lib/scheduled-game-day-promotion";
 
-const ScheduledSessionSchema = z.object({
-  session_date: z.string().min(1, "Date is required."),
-  session_time: z.string().min(1, "Time is required."),
-  num_matches: z.coerce.number().int().min(1, "At least 1 match is required."),
-  venue_id: z.string().uuid().optional().or(z.literal("")),
-});
+const ScheduledSessionSchema = z
+  .object({
+    session_date: z.string().min(1, "Date is required."),
+    session_time: z.string().min(1, "Time is required."),
+    venue_id: z.string().uuid().optional().or(z.literal("")),
+  })
+  .refine((data) => data.session_date >= clubTodayDateString(), {
+    message: "Cannot schedule a session in the past.",
+    path: ["session_date"],
+  });
 
 export type ScheduleFormState = { error?: string; success?: boolean } | undefined;
 
@@ -28,7 +33,6 @@ export async function createScheduledSession(
   const parsed = ScheduledSessionSchema.safeParse({
     session_date: formData.get("session_date"),
     session_time: formData.get("session_time"),
-    num_matches: formData.get("num_matches"),
     venue_id: formData.get("venue_id"),
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid input." };
@@ -47,7 +51,6 @@ export async function createScheduledSession(
     .insert({
       session_date: parsed.data.session_date,
       session_time: parsed.data.session_time,
-      num_matches: parsed.data.num_matches,
       venue_id: parsed.data.venue_id || null,
     })
     .select("id")
@@ -76,7 +79,6 @@ export async function updateScheduledSession(
   const parsed = ScheduledSessionSchema.safeParse({
     session_date: formData.get("session_date"),
     session_time: formData.get("session_time"),
-    num_matches: formData.get("num_matches"),
     venue_id: formData.get("venue_id"),
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid input." };
@@ -95,7 +97,6 @@ export async function updateScheduledSession(
     .update({
       session_date: parsed.data.session_date,
       session_time: parsed.data.session_time,
-      num_matches: parsed.data.num_matches,
       venue_id: parsed.data.venue_id || null,
     })
     .eq("id", id);

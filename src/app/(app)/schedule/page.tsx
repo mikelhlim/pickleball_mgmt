@@ -15,7 +15,6 @@ export default async function SchedulePage() {
       supabase
         .from("scheduled_game_days")
         .select("*")
-        .is("promoted_game_day_id", null)
         .order("session_date", { ascending: true })
         .order("session_time", { ascending: true }),
       supabase.from("scheduled_game_day_players").select("scheduled_game_day_id, player_id"),
@@ -30,12 +29,18 @@ export default async function SchedulePage() {
     rosterBySession.set(row.scheduled_game_day_id, list);
   }
 
-  const sessions: ScheduledSessionWithRoster[] = ((scheduledSessions ?? []) as ScheduledGameDay[]).map(
+  const allSessions: ScheduledSessionWithRoster[] = ((scheduledSessions ?? []) as ScheduledGameDay[]).map(
     (session) => ({
       ...session,
       playerIds: rosterBySession.get(session.id) ?? [],
     })
   );
+  // Promoted sessions have already become real Game Days — only unpromoted
+  // ones are still "upcoming" and editable. The calendar's day markers,
+  // though, should keep showing every day that ever had a session, promoted
+  // or not, so a day's mark doesn't disappear once its session runs.
+  const upcomingSessions = allSessions.filter((s) => !s.promoted_game_day_id);
+  const markedDates = allSessions.map((s) => s.session_date);
 
   const venueList = (venues ?? []) as Venue[];
   const playerList = (players ?? []) as Player[];
@@ -43,21 +48,26 @@ export default async function SchedulePage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Schedule</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Calendar</h1>
         <p className="text-sm text-muted-foreground">
           Plan future Game Day sessions — click a day to schedule one.
         </p>
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <CalendarView sessions={sessions} venues={venueList} players={playerList} />
+        <CalendarView
+          sessions={upcomingSessions}
+          markedDates={markedDates}
+          venues={venueList}
+          players={playerList}
+        />
 
         <Card>
           <CardHeader>
             <CardTitle>Upcoming Sessions</CardTitle>
           </CardHeader>
           <CardContent>
-            <ScheduledSessionsList sessions={sessions} venues={venueList} players={playerList} />
+            <ScheduledSessionsList sessions={upcomingSessions} venues={venueList} players={playerList} />
           </CardContent>
         </Card>
       </div>

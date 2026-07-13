@@ -10,9 +10,16 @@ type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
 // bug as the one fixed in components/ui/formatted-time.tsx, just on the
 // write side instead of display.
 const CLUB_UTC_OFFSET = "+08:00";
+const CLUB_UTC_OFFSET_MS = 8 * 60 * 60 * 1000;
 
 function scheduledInstant(sessionDate: string, sessionTime: string): number {
   return new Date(`${sessionDate}T${sessionTime}${CLUB_UTC_OFFSET}`).getTime();
+}
+
+// Today's date as the club sees it, independent of the server process's own
+// timezone — same reasoning as CLUB_UTC_OFFSET above.
+export function clubTodayDateString(): string {
+  return new Date(Date.now() + CLUB_UTC_OFFSET_MS).toISOString().slice(0, 10);
 }
 
 /**
@@ -23,7 +30,7 @@ function scheduledInstant(sessionDate: string, sessionTime: string): number {
  * a real Game Day, with its planned roster and venue carried over.
  */
 export async function autoPromoteDueScheduledSessions(supabase: SupabaseServerClient): Promise<void> {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = clubTodayDateString();
 
   const { data: due } = await supabase
     .from("scheduled_game_days")

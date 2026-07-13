@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Trash2 } from "lucide-react";
-import { deleteAllGameData } from "@/app/(app)/admin/actions";
+import { deleteScheduledSession } from "@/app/(app)/schedule/actions";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -17,40 +17,44 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
-export function DeleteAllDialog() {
-  const [open, setOpen] = useState(false);
+export function DeleteScheduledSessionButton({
+  sessionId,
+  label,
+}: {
+  sessionId: string;
+  label: string;
+}) {
   const [isPending, startTransition] = useTransition();
+  const [open, setOpen] = useState(false);
 
-  function handleConfirm() {
+  function handleDelete() {
     startTransition(async () => {
       try {
-        await deleteAllGameData();
-        toast.success("All game data has been deleted.");
+        await deleteScheduledSession(sessionId);
+        toast.success("Session cancelled.");
         setOpen(false);
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Failed to delete game data.");
+        toast.error(e instanceof Error ? e.message : "Failed to cancel session.");
       }
     });
   }
 
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
-      <AlertDialogTrigger render={<Button variant="destructive" />}>
-        <Trash2 className="size-4" />
-        Delete All Game Data
+      <AlertDialogTrigger render={<Button variant="ghost" size="icon" aria-label={`Cancel ${label}`} />}>
+        <Trash2 className="size-4 text-destructive" />
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete all game data?</AlertDialogTitle>
+          <AlertDialogTitle>Cancel this scheduled session?</AlertDialogTitle>
           <AlertDialogDescription>
-            This permanently deletes every game day, roster, and match record. Registered players, venues,
-            and upcoming scheduled sessions are kept. This action cannot be undone.
+            This permanently removes the plan for {label}. This cannot be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction variant="destructive" onClick={handleConfirm} disabled={isPending}>
-            {isPending ? "Deleting..." : "Delete Everything"}
+          <AlertDialogAction variant="destructive" onClick={handleDelete} disabled={isPending}>
+            {isPending ? "Removing..." : "Delete"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

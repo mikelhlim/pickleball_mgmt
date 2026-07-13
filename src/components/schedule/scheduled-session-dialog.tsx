@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { format, parseISO } from "date-fns";
-import { Trash2, X } from "lucide-react";
+import { Trash2, Users, X } from "lucide-react";
 import {
   createScheduledSession,
   deleteScheduledSession,
@@ -49,10 +49,10 @@ export function ScheduledSessionDialog({
   players: Player[];
 }) {
   const [isPending, startTransition] = useTransition();
+  const todayStr = format(new Date(), "yyyy-MM-dd");
   const [sessionDate, setSessionDate] = useState(session?.session_date ?? date);
-  const [sessionTime, setSessionTime] = useState(session?.session_time?.slice(0, 5) ?? "17:00");
+  const [sessionTime, setSessionTime] = useState(session?.session_time?.slice(0, 5) ?? "09:00");
   const [venueId, setVenueId] = useState(session?.venue_id ?? "");
-  const [numMatches, setNumMatches] = useState(session?.num_matches ?? 12);
   const [selectedPlayerIds, setSelectedPlayerIds] = useState<string[]>(session?.playerIds ?? []);
 
   const playersById = new Map(players.map((p) => [p.id, p]));
@@ -65,7 +65,6 @@ export function ScheduledSessionDialog({
     formData.set("session_date", sessionDate);
     formData.set("session_time", sessionTime);
     formData.set("venue_id", venueId);
-    formData.set("num_matches", String(numMatches));
     formData.delete("player_ids");
     for (const id of selectedPlayerIds) formData.append("player_ids", id);
 
@@ -115,8 +114,9 @@ export function ScheduledSessionDialog({
               <Input
                 id="session_date"
                 type="date"
+                min={todayStr}
                 value={sessionDate}
-                onChange={(e) => setSessionDate(e.target.value)}
+                onChange={(e) => setSessionDate(e.target.value < todayStr ? todayStr : e.target.value)}
                 required
               />
             </div>
@@ -151,19 +151,6 @@ export function ScheduledSessionDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="num_matches">Number of matches</Label>
-            <Input
-              id="num_matches"
-              type="number"
-              min={1}
-              value={numMatches}
-              onChange={(e) => setNumMatches(Number(e.target.value))}
-              required
-              className="w-32"
-            />
-          </div>
-
-          <div className="space-y-2">
             <Label>Players</Label>
             <div className="flex flex-wrap gap-2">
               {selectedPlayerIds.length === 0 && (
@@ -193,27 +180,38 @@ export function ScheduledSessionDialog({
                 );
               })}
             </div>
-            <Select
-              key={selectedPlayerIds.length}
-              onValueChange={(v: string | null) => {
-                if (v) setSelectedPlayerIds((prev) => [...prev, v]);
-              }}
-              disabled={availablePlayers.length === 0}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue
-                  placeholder={availablePlayers.length === 0 ? "All players added" : "Add a player..."}
-                />
-              </SelectTrigger>
-              <SelectContent>
-                {availablePlayers.map((player) => (
-                  <SelectItem key={player.id} value={player.id}>
-                    {player.name}
-                    {player.nickname ? ` (${player.nickname})` : ""}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <Select
+                key={selectedPlayerIds.length}
+                onValueChange={(v: string | null) => {
+                  if (v) setSelectedPlayerIds((prev) => [...prev, v]);
+                }}
+                disabled={availablePlayers.length === 0}
+              >
+                <SelectTrigger className="w-full flex-1">
+                  <SelectValue
+                    placeholder={availablePlayers.length === 0 ? "All players added" : "Add a player..."}
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {availablePlayers.map((player) => (
+                    <SelectItem key={player.id} value={player.id}>
+                      {player.name}
+                      {player.nickname ? ` (${player.nickname})` : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setSelectedPlayerIds(players.map((p) => p.id))}
+                disabled={availablePlayers.length === 0}
+              >
+                <Users className="size-4" />
+                Add All Players
+              </Button>
+            </div>
           </div>
 
           <DialogFooter className={session ? "sm:justify-between" : undefined}>

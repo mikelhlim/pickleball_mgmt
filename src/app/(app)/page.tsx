@@ -134,7 +134,7 @@ export default async function DashboardPage() {
             <CardContent className="flex items-center gap-4 p-6">
               <CalendarClock className="size-8 text-muted-foreground" />
               <div>
-                <p className="text-sm font-medium">Schedule</p>
+                <p className="text-sm font-medium">Calendar</p>
                 <p className="text-sm text-muted-foreground">Plan a future session</p>
               </div>
             </CardContent>
