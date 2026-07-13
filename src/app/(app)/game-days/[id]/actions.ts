@@ -73,7 +73,7 @@ export async function registerAndAddPlayer(
 
   const supabase = await createClient();
   try {
-    await assertAuthenticated(supabase);
+    await assertAdmin(supabase);
   } catch (e) {
     return { error: e instanceof Error ? e.message : "Not allowed." };
   }

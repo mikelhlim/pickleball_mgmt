@@ -32,6 +32,7 @@ export function RosterPanel({
   roster,
   availablePlayers,
   canEdit,
+  isAdmin,
   defaultNumMatches,
   hasMatches,
 }: {
@@ -39,6 +40,7 @@ export function RosterPanel({
   roster: Player[];
   availablePlayers: Player[];
   canEdit: boolean;
+  isAdmin: boolean;
   defaultNumMatches: number;
   hasMatches: boolean;
 }) {
@@ -174,17 +176,19 @@ export function RosterPanel({
               </Button>
             </div>
 
-            <form ref={registerFormRef} action={registerFormAction} className="space-y-3">
-              <Label className="text-sm font-medium">Register a new player</Label>
-              <div className="flex flex-col gap-2 sm:flex-row">
-                <Input name="name" placeholder="Name" required />
-                <Input name="nickname" placeholder="Nickname (optional)" />
-                <Button type="submit" variant="outline" disabled={registerPending}>
-                  <UserPlus className="size-4" />
-                  {registerPending ? "Adding..." : "Add"}
-                </Button>
-              </div>
-            </form>
+            {isAdmin && (
+              <form ref={registerFormRef} action={registerFormAction} className="space-y-3">
+                <Label className="text-sm font-medium">Register a new player</Label>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <Input name="name" placeholder="Name" required />
+                  <Input name="nickname" placeholder="Nickname (optional)" />
+                  <Button type="submit" variant="outline" disabled={registerPending}>
+                    <UserPlus className="size-4" />
+                    {registerPending ? "Adding..." : "Add"}
+                  </Button>
+                </div>
+              </form>
+            )}
 
             <form action={generateFormAction} className="space-y-3 border-t pt-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-end">

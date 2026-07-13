@@ -105,6 +105,7 @@ export default async function GameDayDetailPage({
         roster={roster}
         availablePlayers={availablePlayers}
         canEdit={canEditRoster}
+        isAdmin={isAdmin}
         defaultNumMatches={gameDay.num_matches}
         hasMatches={matchList.length > 0}
       />

@@ -100,12 +100,13 @@ create index if not exists idx_game_days_venue on game_days (venue_id);
 -- ============================================================================
 -- Row Level Security
 -- Any authenticated user may read everything (view access). Running a game
--- day — creating one, managing its roster, generating the schedule, and
--- starting/ending matches — is also open to any signed-in user; only
--- deleting a game day, and managing players/venues outside the roster
--- flow, require the admin role. A user's role lives in their JWT's
--- app_metadata.role; missing/null defaults to admin, so accounts that
--- existed before roles were introduced keep full access without needing a
+-- day — creating one, adding/removing existing players on its roster,
+-- generating the schedule, and starting/ending matches — is also open to
+-- any signed-in user; registering a brand-new player, deleting a game
+-- day, and managing players/venues outside the roster flow, require the
+-- admin role. A user's role lives in their JWT's app_metadata.role;
+-- missing/null defaults to admin, so accounts that existed before roles
+-- were introduced keep full access without needing a
 -- data migration.
 -- ============================================================================
 
@@ -129,13 +130,8 @@ drop policy if exists "admin write" on players;
 drop policy if exists "authenticated insert" on players;
 create policy "authenticated read" on players
   for select using (auth.uid() is not null);
--- Registering a brand-new player from the game-day roster panel is open to
--- any signed-in user; editing/deleting an existing player stays admin-only
--- via "admin write" below (a permissive insert policy here doesn't relax
--- that — Postgres OR's separate policies per command, so update/delete
--- still require is_admin()).
-create policy "authenticated insert" on players
-  for insert with check (auth.uid() is not null);
+-- Registering a brand-new player (from the Players page or the game-day
+-- roster panel's "Register a new player" flow) stays admin-only.
 create policy "admin write" on players
   for all using (public.is_admin()) with check (public.is_admin());
 
