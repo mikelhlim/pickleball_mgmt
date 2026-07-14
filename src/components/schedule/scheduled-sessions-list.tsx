@@ -6,21 +6,25 @@ import { CalendarClock, MapPin, Users } from "lucide-react";
 import { formatTimeOfDay } from "@/lib/format";
 import { ScheduledSessionDialog, type ScheduledSessionWithRoster } from "./scheduled-session-dialog";
 import { DeleteScheduledSessionButton } from "./delete-scheduled-session-button";
+import { SendReminderButton } from "./send-reminder-button";
 import type { Player, Venue } from "@/lib/types";
 
 export function ScheduledSessionsList({
   sessions,
   venues,
   players,
+  isAdmin = false,
   emptyMessage = "No upcoming sessions scheduled.",
 }: {
   sessions: ScheduledSessionWithRoster[];
   venues: Venue[];
   players: Player[];
+  isAdmin?: boolean;
   emptyMessage?: string;
 }) {
   const [editing, setEditing] = useState<ScheduledSessionWithRoster | null>(null);
   const venuesById = new Map(venues.map((v) => [v.id, v]));
+  const playersById = new Map(players.map((p) => [p.id, p]));
 
   if (sessions.length === 0) {
     return <p className="text-sm text-muted-foreground">{emptyMessage}</p>;
@@ -56,6 +60,15 @@ export function ScheduledSessionsList({
                   </div>
                 </div>
               </button>
+              {isAdmin && (
+                <SendReminderButton
+                  sessionId={session.id}
+                  label={label}
+                  recipientCount={
+                    session.playerIds.filter((id) => playersById.get(id)?.email).length
+                  }
+                />
+              )}
               <DeleteScheduledSessionButton sessionId={session.id} label={label} />
             </li>
           );

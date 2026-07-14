@@ -1,10 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import nodemailer from "nodemailer";
+import { format, parseISO } from "date-fns";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { assertAuthenticated } from "@/lib/auth-role";
+import { assertAdmin, assertAuthenticated } from "@/lib/auth-role";
 import { clubTodayDateString } from "@/lib/scheduled-game-day-promotion";
+import { formatTimeOfDay } from "@/lib/format";
 
 const ScheduledSessionSchema = z
   .object({
@@ -124,4 +127,86 @@ export async function deleteScheduledSession(id: string) {
   if (error) throw new Error(error.message);
   revalidatePath("/schedule");
   revalidatePath("/");
+}
+
+export async function sendScheduleReminder(
+  scheduledGameDayId: string
+): Promise<{ sentCount: number; skippedCount: number; failedCount: number }> {
+  const supabase = await createClient();
+  // Reminder emails carry players' contact details, so only admins — the
+  // same people who can already see email addresses — can trigger this.
+  await assertAdmin(supabase);
+
+  const { data: session, error: sessionError } = await supabase
+    .from("scheduled_game_days")
+    .select("session_date, session_time, venue_id")
+    .eq("id", scheduledGameDayId)
+    .single();
+  if (sessionError || !session) throw new Error(sessionError?.message ?? "Session not found.");
+
+  const [{ data: rosterRows }, { data: venue }] = await Promise.all([
+    supabase
+      .from("scheduled_game_day_players")
+      .select("player_id")
+      .eq("scheduled_game_day_id", scheduledGameDayId),
+    session.venue_id
+      ? supabase.from("venues").select("name").eq("id", session.venue_id).maybeSingle()
+      : Promise.resolve({ data: null as { name: string } | null }),
+  ]);
+
+  const playerIds = (rosterRows ?? []).map((r) => r.player_id as string);
+  if (playerIds.length === 0) throw new Error("This session has no players on its roster yet.");
+
+  const { data: players } = await supabase
+    .from("players")
+    .select("name, nickname, email")
+    .in("id", playerIds);
+
+  const recipients = (players ?? []).filter(
+    (p): p is { name: string; nickname: string | null; email: string } => Boolean(p.email)
+  );
+  const skippedCount = playerIds.length - recipients.length;
+  if (recipients.length === 0) {
+    throw new Error("No players on this session's roster have an email on file.");
+  }
+
+  if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
+    throw new Error(
+      "Email reminders aren't configured yet — an admin needs to add GMAIL_USER and GMAIL_APP_PASSWORD."
+    );
+  }
+  const transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_APP_PASSWORD },
+  });
+  const from = process.env.GMAIL_FROM_NAME
+    ? `${process.env.GMAIL_FROM_NAME} <${process.env.GMAIL_USER}>`
+    : process.env.GMAIL_USER;
+
+  const dateLabel = format(parseISO(session.session_date), "EEEE, MMMM d, yyyy");
+  const timeLabel = formatTimeOfDay(session.session_time);
+  const venueLine = venue?.name ? `<p>📍 ${venue.name}</p>` : "";
+
+  // Send individually (rather than one email with everyone in "to"/"bcc") so
+  // one bad address can't block the reminder from reaching everyone else,
+  // and so no player sees anyone else's email address.
+  const results = await Promise.allSettled(
+    recipients.map((player) =>
+      transporter.sendMail({
+        from,
+        to: player.email,
+        subject: `Reminder: Pickleball Game Day — ${dateLabel}`,
+        html: `
+          <p>Hi ${player.nickname || player.name},</p>
+          <p>This is a reminder that you're on the roster for an upcoming Game Day session:</p>
+          <p><strong>${dateLabel} at ${timeLabel}</strong></p>
+          ${venueLine}
+          <p>See you on the court!</p>
+        `,
+      })
+    )
+  );
+
+  const failedCount = results.filter((r) => r.status === "rejected").length;
+  return { sentCount: recipients.length - failedCount, skippedCount, failedCount };
 }

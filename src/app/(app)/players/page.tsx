@@ -29,10 +29,14 @@ export default async function PlayersPage() {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {(players as Player[]).map((player) => {
             const stats = statsById.get(player.id);
+            // Email and phone are personal contact details — only admins see
+            // them. Redacting here (rather than just hiding in the UI) keeps
+            // the values out of the page's data entirely for a viewer.
+            const visiblePlayer = isAdmin ? player : { ...player, email: null, phone: null };
             return (
               <PlayerCard
                 key={player.id}
-                player={player}
+                player={visiblePlayer}
                 wins={stats?.wins ?? 0}
                 losses={stats?.losses ?? 0}
                 isAdmin={isAdmin}

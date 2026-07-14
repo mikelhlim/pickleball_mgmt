@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { format, parseISO } from "date-fns";
 import { ArrowLeft, Mail, Phone, Trophy } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentRole } from "@/lib/auth-role";
 import { computeMatchStats } from "@/lib/stats";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,13 +29,16 @@ export default async function PlayerProfilePage({
   const { id } = await params;
   const supabase = await createClient();
 
-  const { data: player } = (await supabase
-    .from("players")
-    .select("*")
-    .eq("id", id)
-    .maybeSingle()) as { data: Player | null };
+  const [{ data: rawPlayer }, role] = await Promise.all([
+    supabase.from("players").select("*").eq("id", id).maybeSingle(),
+    getCurrentRole(supabase),
+  ]);
+  const fetchedPlayer = rawPlayer as Player | null;
 
-  if (!player) notFound();
+  if (!fetchedPlayer) notFound();
+  const isAdmin = role === "admin";
+  // Email and phone are personal contact details — only admins see them.
+  const player = isAdmin ? fetchedPlayer : { ...fetchedPlayer, email: null, phone: null };
 
   const orFilter = [
     `team1_player1_id.eq.${id}`,

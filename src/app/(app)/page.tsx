@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { BarChart3, CalendarClock, CalendarDays, Trophy, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentRole } from "@/lib/auth-role";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SessionScroller, type SessionGroup } from "@/components/dashboard/session-scroller";
 import { autoPromoteDueScheduledSessions } from "@/lib/scheduled-game-day-promotion";
@@ -21,6 +22,7 @@ export default async function DashboardPage() {
     { data: venues },
     { data: upcomingSessions },
     { data: scheduledRosterRows },
+    role,
   ] = await Promise.all([
     supabase.from("players").select("*", { count: "exact", head: true }),
     supabase
@@ -41,7 +43,9 @@ export default async function DashboardPage() {
       .order("session_time", { ascending: true })
       .limit(5),
     supabase.from("scheduled_game_day_players").select("scheduled_game_day_id, player_id"),
+    getCurrentRole(supabase),
   ]);
+  const isAdmin = role === "admin";
 
   const winPct = (wins: number, matchesPlayed: number) => (matchesPlayed > 0 ? wins / matchesPlayed : 0);
   const byWinPctDesc = (a: { wins: number; matches_played: number }, b: { wins: number; matches_played: number }) =>
@@ -162,6 +166,7 @@ export default async function DashboardPage() {
             sessions={upcomingSessionsWithRoster}
             venues={venueList}
             players={playerList}
+            isAdmin={isAdmin}
           />
         </CardContent>
       </Card>

@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { autoPromoteDueScheduledSessions } from "@/lib/scheduled-game-day-promotion";
+import { getCurrentRole } from "@/lib/auth-role";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CalendarView } from "@/components/schedule/calendar-view";
 import { ScheduledSessionsList } from "@/components/schedule/scheduled-sessions-list";
@@ -10,17 +11,24 @@ export default async function SchedulePage() {
   const supabase = await createClient();
   await autoPromoteDueScheduledSessions(supabase);
 
-  const [{ data: scheduledSessions }, { data: rosterRows }, { data: venues }, { data: players }] =
-    await Promise.all([
-      supabase
-        .from("scheduled_game_days")
-        .select("*")
-        .order("session_date", { ascending: true })
-        .order("session_time", { ascending: true }),
-      supabase.from("scheduled_game_day_players").select("scheduled_game_day_id, player_id"),
-      supabase.from("venues").select("*").order("name"),
-      supabase.from("players").select("*").order("name"),
-    ]);
+  const [
+    { data: scheduledSessions },
+    { data: rosterRows },
+    { data: venues },
+    { data: players },
+    role,
+  ] = await Promise.all([
+    supabase
+      .from("scheduled_game_days")
+      .select("*")
+      .order("session_date", { ascending: true })
+      .order("session_time", { ascending: true }),
+    supabase.from("scheduled_game_day_players").select("scheduled_game_day_id, player_id"),
+    supabase.from("venues").select("*").order("name"),
+    supabase.from("players").select("*").order("name"),
+    getCurrentRole(supabase),
+  ]);
+  const isAdmin = role === "admin";
 
   const rosterBySession = new Map<string, string[]>();
   for (const row of rosterRows ?? []) {
@@ -67,7 +75,12 @@ export default async function SchedulePage() {
             <CardTitle>Upcoming Sessions</CardTitle>
           </CardHeader>
           <CardContent>
-            <ScheduledSessionsList sessions={upcomingSessions} venues={venueList} players={playerList} />
+            <ScheduledSessionsList
+              sessions={upcomingSessions}
+              venues={venueList}
+              players={playerList}
+              isAdmin={isAdmin}
+            />
           </CardContent>
         </Card>
       </div>
