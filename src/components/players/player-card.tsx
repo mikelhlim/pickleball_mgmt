@@ -24,13 +24,9 @@ import type { Player } from "@/lib/types";
 
 export function PlayerCard({
   player,
-  wins = 0,
-  losses = 0,
   isAdmin = false,
 }: {
   player: Player;
-  wins?: number;
-  losses?: number;
   isAdmin?: boolean;
 }) {
   const [isPending, startTransition] = useTransition();
@@ -71,11 +67,6 @@ export function PlayerCard({
               <p className="flex items-center gap-1 truncate text-xs text-muted-foreground">
                 <Phone className="size-3 shrink-0" />
                 {player.phone}
-              </p>
-            )}
-            {wins + losses > 0 && (
-              <p className="text-xs text-muted-foreground tabular-nums">
-                {wins}W – {losses}L
               </p>
             )}
           </div>
