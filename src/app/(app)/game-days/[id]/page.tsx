@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { format, parseISO } from "date-fns";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, FileText } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { autoEndIfExpired } from "@/lib/game-day-lifecycle";
 import { getCurrentRole } from "@/lib/auth-role";
@@ -9,6 +9,7 @@ import { RosterPanel } from "@/components/game-days/roster-panel";
 import { MatchCard } from "@/components/game-days/match-card";
 import { EndGameDayDialog } from "@/components/game-days/end-game-day-dialog";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { formatHoursMinutesBetween, formatTimeOfDay } from "@/lib/format";
 import { FormattedTime } from "@/components/ui/formatted-time";
 import type { GameDay, Match, Player, Venue } from "@/lib/types";
@@ -90,6 +91,16 @@ export default async function GameDayDetailPage({
         </div>
         <div className="flex items-center gap-3">
           {gameDay.status === "in_progress" && isAdmin && <EndGameDayDialog gameDayId={id} />}
+          {gameDay.status === "completed" && (
+            <Button
+              variant="outline"
+              size="sm"
+              render={<a href={`/game-days/${id}/highlights`} target="_blank" rel="noopener noreferrer" />}
+            >
+              <FileText className="size-4" />
+              Highlights (PDF)
+            </Button>
+          )}
           <Badge
             variant={
               gameDay.status === "completed"

@@ -127,29 +127,6 @@ export function ScheduledSessionDialog({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="session_time">Time</Label>
-              <Input
-                id="session_time"
-                type="time"
-                value={sessionTime}
-                onChange={(e) => setSessionTime(e.target.value)}
-                required
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label htmlFor="end_time">End Time</Label>
-              <Input
-                id="end_time"
-                type="time"
-                min={sessionTime}
-                value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
               <Label htmlFor="court_number">Court Number</Label>
               <Input
                 id="court_number"
@@ -159,6 +136,29 @@ export function ScheduledSessionDialog({
                 placeholder="e.g. 3"
                 value={courtNumber}
                 onChange={(e) => setCourtNumber(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="session_time">Time</Label>
+              <Input
+                id="session_time"
+                type="time"
+                value={sessionTime}
+                onChange={(e) => setSessionTime(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="end_time">End Time</Label>
+              <Input
+                id="end_time"
+                type="time"
+                min={sessionTime}
+                value={endTime}
+                onChange={(e) => setEndTime(e.target.value)}
               />
             </div>
           </div>
