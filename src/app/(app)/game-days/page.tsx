@@ -58,6 +58,7 @@ export default async function GameDaysPage() {
                     <p className="font-medium">{label}</p>
                     <p className="text-sm text-muted-foreground">
                       {gameDay.num_matches} matches
+                      {gameDay.court_number && <> · Court {gameDay.court_number}</>}
                       {gameDay.venue_id && venuesById.get(gameDay.venue_id) && (
                         <> · {venuesById.get(gameDay.venue_id)!.name}</>
                       )}

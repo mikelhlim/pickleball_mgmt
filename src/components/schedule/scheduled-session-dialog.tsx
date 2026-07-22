@@ -52,6 +52,10 @@ export function ScheduledSessionDialog({
   const todayStr = format(new Date(), "yyyy-MM-dd");
   const [sessionDate, setSessionDate] = useState(session?.session_date ?? date);
   const [sessionTime, setSessionTime] = useState(session?.session_time?.slice(0, 5) ?? "09:00");
+  const [endTime, setEndTime] = useState(session?.end_time?.slice(0, 5) ?? "");
+  const [courtNumber, setCourtNumber] = useState(
+    session?.court_number != null ? String(session.court_number) : ""
+  );
   const [venueId, setVenueId] = useState(session?.venue_id ?? "");
   const [selectedPlayerIds, setSelectedPlayerIds] = useState<string[]>(session?.playerIds ?? []);
 
@@ -64,6 +68,8 @@ export function ScheduledSessionDialog({
     if (session) formData.set("id", session.id);
     formData.set("session_date", sessionDate);
     formData.set("session_time", sessionTime);
+    formData.set("end_time", endTime);
+    formData.set("court_number", courtNumber);
     formData.set("venue_id", venueId);
     formData.delete("player_ids");
     for (const id of selectedPlayerIds) formData.append("player_ids", id);
@@ -128,6 +134,31 @@ export function ScheduledSessionDialog({
                 value={sessionTime}
                 onChange={(e) => setSessionTime(e.target.value)}
                 required
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="end_time">End Time</Label>
+              <Input
+                id="end_time"
+                type="time"
+                min={sessionTime}
+                value={endTime}
+                onChange={(e) => setEndTime(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="court_number">Court Number</Label>
+              <Input
+                id="court_number"
+                type="number"
+                min="1"
+                step="1"
+                placeholder="e.g. 3"
+                value={courtNumber}
+                onChange={(e) => setCourtNumber(e.target.value)}
               />
             </div>
           </div>

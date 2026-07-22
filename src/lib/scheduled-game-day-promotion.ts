@@ -34,7 +34,7 @@ export async function autoPromoteDueScheduledSessions(supabase: SupabaseServerCl
 
   const { data: due } = await supabase
     .from("scheduled_game_days")
-    .select("id, session_date, session_time, num_matches, venue_id")
+    .select("id, session_date, session_time, end_time, court_number, num_matches, venue_id")
     .is("promoted_game_day_id", null)
     .lte("session_date", today);
 
@@ -51,6 +51,8 @@ export async function autoPromoteDueScheduledSessions(supabase: SupabaseServerCl
         session_date: session.session_date,
         num_matches: session.num_matches,
         venue_id: session.venue_id,
+        end_time: session.end_time,
+        court_number: session.court_number,
       })
       .select("id")
       .single();

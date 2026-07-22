@@ -48,6 +48,8 @@ create table if not exists game_days (
   started_at timestamptz,
   ended_at timestamptz,
   venue_id uuid references venues (id) on delete set null,
+  end_time time,
+  court_number integer check (court_number > 0),
   created_at timestamptz not null default now()
 );
 
@@ -56,6 +58,12 @@ create table if not exists game_days (
 alter table game_days add column if not exists started_at timestamptz;
 alter table game_days add column if not exists ended_at timestamptz;
 alter table game_days add column if not exists venue_id uuid references venues (id) on delete set null;
+-- end_time/court_number are the planned values carried over from the
+-- scheduled_game_days row that was promoted into this one (see
+-- src/lib/scheduled-game-day-promotion.ts); a game day created directly via
+-- "New Game Day" (bypassing scheduling) leaves both null.
+alter table game_days add column if not exists end_time time;
+alter table game_days add column if not exists court_number integer check (court_number > 0);
 
 create table if not exists game_day_players (
   id uuid primary key default gen_random_uuid(),
@@ -109,11 +117,18 @@ create table if not exists scheduled_game_days (
   id uuid primary key default gen_random_uuid(),
   session_date date not null,
   session_time time not null,
+  end_time time,
+  court_number integer check (court_number > 0),
   num_matches integer not null default 12 check (num_matches > 0),
   venue_id uuid references venues (id) on delete set null,
   promoted_game_day_id uuid references game_days (id) on delete cascade,
   created_at timestamptz not null default now()
 );
+
+-- Adds columns when re-running this script against a database created
+-- before those columns existed.
+alter table scheduled_game_days add column if not exists end_time time;
+alter table scheduled_game_days add column if not exists court_number integer check (court_number > 0);
 
 create table if not exists scheduled_game_day_players (
   scheduled_game_day_id uuid not null references scheduled_game_days (id) on delete cascade,

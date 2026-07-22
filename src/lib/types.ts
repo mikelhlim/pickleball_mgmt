@@ -28,6 +28,8 @@ export type GameDay = {
   started_at: string | null;
   ended_at: string | null;
   venue_id: string | null;
+  end_time: string | null;
+  court_number: number | null;
   created_at: string;
 };
 
@@ -55,6 +57,8 @@ export type ScheduledGameDay = {
   id: string;
   session_date: string;
   session_time: string;
+  end_time: string | null;
+  court_number: number | null;
   num_matches: number;
   venue_id: string | null;
   promoted_game_day_id: string | null;

@@ -13,11 +13,21 @@ const ScheduledSessionSchema = z
   .object({
     session_date: z.string().min(1, "Date is required."),
     session_time: z.string().min(1, "Time is required."),
+    end_time: z.string().optional().or(z.literal("")),
+    court_number: z.string().optional().or(z.literal("")),
     venue_id: z.string().uuid().optional().or(z.literal("")),
   })
   .refine((data) => data.session_date >= clubTodayDateString(), {
     message: "Cannot schedule a session in the past.",
     path: ["session_date"],
+  })
+  .refine((data) => !data.end_time || data.end_time > data.session_time, {
+    message: "End time must be after the start time.",
+    path: ["end_time"],
+  })
+  .refine((data) => !data.court_number || /^\d+$/.test(data.court_number), {
+    message: "Court number must be a positive whole number.",
+    path: ["court_number"],
   });
 
 export type ScheduleFormState = { error?: string; success?: boolean } | undefined;
@@ -36,6 +46,8 @@ export async function createScheduledSession(
   const parsed = ScheduledSessionSchema.safeParse({
     session_date: formData.get("session_date"),
     session_time: formData.get("session_time"),
+    end_time: formData.get("end_time"),
+    court_number: formData.get("court_number"),
     venue_id: formData.get("venue_id"),
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid input." };
@@ -54,6 +66,8 @@ export async function createScheduledSession(
     .insert({
       session_date: parsed.data.session_date,
       session_time: parsed.data.session_time,
+      end_time: parsed.data.end_time || null,
+      court_number: parsed.data.court_number ? Number(parsed.data.court_number) : null,
       venue_id: parsed.data.venue_id || null,
     })
     .select("id")
@@ -82,6 +96,8 @@ export async function updateScheduledSession(
   const parsed = ScheduledSessionSchema.safeParse({
     session_date: formData.get("session_date"),
     session_time: formData.get("session_time"),
+    end_time: formData.get("end_time"),
+    court_number: formData.get("court_number"),
     venue_id: formData.get("venue_id"),
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid input." };
@@ -100,6 +116,8 @@ export async function updateScheduledSession(
     .update({
       session_date: parsed.data.session_date,
       session_time: parsed.data.session_time,
+      end_time: parsed.data.end_time || null,
+      court_number: parsed.data.court_number ? Number(parsed.data.court_number) : null,
       venue_id: parsed.data.venue_id || null,
     })
     .eq("id", id);
@@ -139,7 +157,7 @@ export async function sendScheduleReminder(
 
   const { data: session, error: sessionError } = await supabase
     .from("scheduled_game_days")
-    .select("session_date, session_time, venue_id")
+    .select("session_date, session_time, end_time, court_number, venue_id")
     .eq("id", scheduledGameDayId)
     .single();
   if (sessionError || !session) throw new Error(sessionError?.message ?? "Session not found.");
@@ -184,8 +202,11 @@ export async function sendScheduleReminder(
     : process.env.GMAIL_USER;
 
   const dateLabel = format(parseISO(session.session_date), "EEEE, MMMM d, yyyy");
-  const timeLabel = formatTimeOfDay(session.session_time);
+  const timeLabel = session.end_time
+    ? `${formatTimeOfDay(session.session_time)} – ${formatTimeOfDay(session.end_time)}`
+    : formatTimeOfDay(session.session_time);
   const venueLine = venue?.name ? `<p>📍 ${venue.name}</p>` : "";
+  const courtLine = session.court_number ? `<p>🏓 Court ${session.court_number}</p>` : "";
 
   // Send individually (rather than one email with everyone in "to"/"bcc") so
   // one bad address can't block the reminder from reaching everyone else,
@@ -201,6 +222,7 @@ export async function sendScheduleReminder(
           <p>This is a reminder that you're on the roster for an upcoming Game Day session:</p>
           <p><strong>${dateLabel} at ${timeLabel}</strong></p>
           ${venueLine}
+          ${courtLine}
           <p>See you on the court!</p>
         `,
       })

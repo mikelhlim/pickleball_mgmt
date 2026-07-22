@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { format, parseISO } from "date-fns";
-import { CalendarClock, MapPin, Users } from "lucide-react";
+import { CalendarClock, Hash, MapPin, Users } from "lucide-react";
 import { formatTimeOfDay } from "@/lib/format";
 import { ScheduledSessionDialog, type ScheduledSessionWithRoster } from "./scheduled-session-dialog";
 import { DeleteScheduledSessionButton } from "./delete-scheduled-session-button";
@@ -35,7 +35,10 @@ export function ScheduledSessionsList({
       <ul className="divide-y">
         {sessions.map((session) => {
           const venue = session.venue_id ? venuesById.get(session.venue_id) : null;
-          const label = `${format(parseISO(session.session_date), "EEE, MMM d")} · ${formatTimeOfDay(session.session_time)}`;
+          const timeLabel = session.end_time
+            ? `${formatTimeOfDay(session.session_time)}–${formatTimeOfDay(session.end_time)}`
+            : formatTimeOfDay(session.session_time);
+          const label = `${format(parseISO(session.session_date), "EEE, MMM d")} · ${timeLabel}`;
           return (
             <li key={session.id} className="flex items-center justify-between gap-2">
               <button
@@ -51,6 +54,12 @@ export function ScheduledSessionsList({
                       <span className="flex items-center gap-1">
                         <MapPin className="size-3" />
                         {venue.name}
+                      </span>
+                    )}
+                    {session.court_number && (
+                      <span className="flex items-center gap-1">
+                        <Hash className="size-3" />
+                        Court {session.court_number}
                       </span>
                     )}
                     <span className="flex items-center gap-1">
