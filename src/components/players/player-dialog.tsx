@@ -142,7 +142,6 @@ export function PlayerDialog({ mode, player }: { mode: "create" | "edit"; player
                 name="photo"
                 type="file"
                 accept="image/*"
-                capture="environment"
                 className="hidden"
                 disabled={isProcessingPhoto}
                 onChange={handlePhotoChange}
