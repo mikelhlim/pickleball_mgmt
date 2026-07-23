@@ -88,6 +88,7 @@ create table if not exists matches (
   started_at timestamptz,
   ended_at timestamptz,
   duration_seconds integer,
+  is_ad_hoc boolean not null default false,
   created_at timestamptz not null default now(),
   unique (game_day_id, match_number)
 );
@@ -99,6 +100,12 @@ create table if not exists matches (
 alter table matches drop constraint if exists matches_status_check;
 alter table matches add constraint matches_status_check
   check (status in ('pending', 'in_progress', 'completed', 'cancelled'));
+
+-- Adds this column when re-running this script against a database created
+-- before ad-hoc matches existed (see createAdHocMatch in
+-- src/app/(app)/game-days/[id]/actions.ts) — distinguishes a match created
+-- mid-session from one created by the auto-generated schedule.
+alter table matches add column if not exists is_ad_hoc boolean not null default false;
 
 create index if not exists idx_game_day_players_game_day on game_day_players (game_day_id);
 create index if not exists idx_game_day_players_player on game_day_players (player_id);

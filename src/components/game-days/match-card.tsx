@@ -146,7 +146,10 @@ export function MatchCard({
       }
     >
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <span className="text-sm font-semibold text-muted-foreground">Match {match.match_number}</span>
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-semibold text-muted-foreground">Match {match.match_number}</span>
+          {match.is_ad_hoc && <Badge variant="outline">Ad Hoc Match</Badge>}
+        </div>
         <div className="flex items-center gap-1">
           {canDelete && (
             <DeleteMatchButton

@@ -50,6 +50,7 @@ export type Match = {
   started_at: string | null;
   ended_at: string | null;
   duration_seconds: number | null;
+  is_ad_hoc: boolean;
   created_at: string;
 };
 

@@ -20,6 +20,7 @@ function makeMatch(overrides: Partial<Match> = {}): Match {
     started_at: null,
     ended_at: null,
     duration_seconds: null,
+    is_ad_hoc: false,
     created_at: "2026-01-01T00:00:00Z",
     ...overrides,
   };

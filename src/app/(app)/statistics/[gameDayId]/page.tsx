@@ -133,9 +133,12 @@ export default async function GameDayStatsPage({
               className={match.status === "in_progress" ? "border-chart-4 bg-chart-4/5" : ""}
             >
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <span className="text-sm font-semibold text-muted-foreground">
-                  Match {match.match_number}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-semibold text-muted-foreground">
+                    Match {match.match_number}
+                  </span>
+                  {match.is_ad_hoc && <Badge variant="outline">Ad Hoc Match</Badge>}
+                </div>
                 <Badge
                   variant={match.status === "completed" ? "secondary" : "outline"}
                   className={match.status === "in_progress" ? "bg-chart-4 text-white" : ""}

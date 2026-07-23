@@ -374,6 +374,7 @@ export async function createAdHocMatch(
     team2_player1_id: parsed.data.team2_player1_id,
     team2_player2_id: parsed.data.team2_player2_id,
     status: "pending" as const,
+    is_ad_hoc: true,
   });
   if (error) return { error: error.message };
 
