@@ -5,7 +5,7 @@ auto-generated doubles Order of Play, a scheduling calendar, and win/loss statis
 natural-language assistant. This document covers the stack, every integration point, the
 database design, the full Server Action surface, configuration, and a file-by-file reference.
 
-`Next.js 16 App Router` · `React 19` · `TypeScript` · `Tailwind CSS 4` · `Supabase` · `Vercel` · `Anthropic Claude API`
+`Next.js 16 App Router` · `React 19` · `TypeScript` · `Tailwind CSS 4` · `Supabase` · `Vercel` · `Anthropic Claude API` · `Gmail SMTP`
 
 > An interactive version of this document (with hand-drawn diagrams and a sticky table of
 > contents) was also published as a Claude Artifact during the same session this file was
@@ -34,7 +34,7 @@ database design, the full Server Action surface, configuration, and a file-by-fi
 One Next.js application, one Supabase project, no separate backend service and no internal
 REST API. Every read is a Server Component query against Supabase; every write is a Next.js
 Server Action. A companion iOS app (a separate codebase, not in this repository) shares the
-same Supabase project and reaches two small Edge Functions for the two operations it can't
+same Supabase project and reaches three small Edge Functions for the operations it can't
 perform safely from a mobile binary.
 
 - **Frontend/backend** live together as one Next.js deployment on Vercel — Server Components
@@ -44,6 +44,11 @@ perform safely from a mobile binary.
   photos.
 - **One external AI integration**: the Statistics page's natural-language "Stats Assistant"
   calls the Anthropic Claude API directly from a Server Action.
+- **One external email integration**: admins can send a reminder email to a scheduled
+  session's roster from the Calendar page, delivered via Gmail SMTP.
+- **Player contact info is admin-only.** Email and phone are redacted server-side for
+  non-admin viewers on the Players list and profile pages — the data never reaches a
+  viewer's client payload, not just hidden in the rendered UI.
 - **No background jobs.** Two time-based behaviors — auto-ending a stale game day, and
   auto-promoting a due scheduled session into a real game day — run lazily on page load
   instead of on a cron schedule.
@@ -63,6 +68,7 @@ perform safely from a mobile binary.
 | Toasts | `sonner` | Mounted once in the root layout. |
 | Backend-as-a-service | Supabase (Postgres 15, Auth, Storage, Edge Functions) | `@supabase/ssr` + `@supabase/supabase-js`. |
 | AI | Anthropic Claude API | `@anthropic-ai/sdk`; model `claude-opus-4-8` with structured JSON output. |
+| Email | Gmail SMTP | `nodemailer` (+ `@types/nodemailer`); free, no sending domain to own/verify — see [External systems](#external-systems) for why this replaced an earlier Resend integration. |
 | Hosting/CI-CD | Vercel | Auto-deploys on push to `main` via the GitHub integration. |
 | Testing | Vitest | Unit tests for the doubles-scheduling algorithm only. |
 
@@ -70,7 +76,7 @@ perform safely from a mobile binary.
 
 The web app is a single Vercel deployment talking to a single Supabase project. A separate iOS
 app (out of scope for this repo) is drawn alongside because it shares the same Supabase backend
-and explains why two Edge Functions exist in `supabase/functions/`.
+and explains why three Edge Functions exist in `supabase/functions/`.
 
 ```mermaid
 flowchart LR
@@ -90,28 +96,33 @@ flowchart LR
     end
 
     Anthropic["Anthropic Claude API<br/>model: claude-opus-4-8"]
+    Gmail["Gmail SMTP<br/>smtp.gmail.com, App Password"]
     GitHub["GitHub Repository<br/>main branch"]
 
     U -- HTTPS --> Proxy
     RSC -. "@supabase/ssr" .-> Auth
     SA -. "@supabase/ssr" .-> DB
     SA -- "askStatsQuestion()<br/>ANTHROPIC_API_KEY" --> Anthropic
+    SA -- "sendScheduleReminder()<br/>GMAIL_APP_PASSWORD" --> Gmail
     GitHub -- "git push → auto-deploy" --> Vercel
 
     IOS["iOS Companion App<br/>(separate codebase, external)"]
     subgraph EdgeFns["Supabase Edge Functions (Deno)"]
         SF["stats-assistant"]
         CPF["clear-password-flag"]
+        SR["send-reminder"]
     end
     IOS -- "HTTPS + user JWT" --> EdgeFns
     EdgeFns -. "same project" .-> Auth
     EdgeFns -- "Supabase secret" --> Anthropic
+    EdgeFns -- "Supabase secret" --> Gmail
 ```
 
 The web app never talks to the Edge Functions — those exist solely for the iOS client, which
-can't hold `ANTHROPIC_API_KEY` or `SUPABASE_SERVICE_ROLE_KEY` inside a distributed binary. Both
-functions re-implement web app logic (`statistics/actions.ts` and `lib/actions/auth.ts`) against
-the same Postgres/Auth project, verifying the caller's JWT instead.
+can't hold `ANTHROPIC_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, or `GMAIL_APP_PASSWORD` inside a
+distributed binary. All three functions re-implement web app logic (`statistics/actions.ts`,
+`lib/actions/auth.ts`, and `schedule/actions.ts`'s `sendScheduleReminder`) against the same
+Postgres/Auth project, verifying the caller's JWT instead.
 
 ## Request & auth flow
 
@@ -154,12 +165,26 @@ before roles existed fully usable with no data migration.
 | Schedule / edit / cancel a Calendar session | ✓ | |
 | Register a *brand-new* player | | ✓ |
 | Edit/delete an existing player or venue | | ✓ |
+| View a player's email or phone number | | ✓ |
+| Send a reminder email to a session's roster | | ✓ |
 | Delete a Game Day, or end one early | | ✓ |
 | Admin page (users, Delete All Game Data) | | ✓ |
 
 Enforcement is layered three times: the `proxy.ts` redirect gate, a page-level
 `requireAdminPage()`/role check, and the underlying Postgres RLS policy — so a bug in any one
 layer doesn't expose data.
+
+> **Player email/phone redaction is an exception to that pattern.** RLS is row-level, not
+> column-level, so it can't grant a viewer `name`/`nickname`/`photo_url` on the `players` table
+> while withholding just `email`/`phone` — every other feature (rosters, match cards, stats)
+> needs the non-sensitive columns freely readable by any signed-in user. Instead,
+> `players/page.tsx` and `players/[id]/page.tsx` redact `email`/`phone` to `null` in the Server
+> Component, for non-admins, before the row is ever passed to a Client Component — so the values
+> never reach a viewer's rendered page or its client-side payload. A viewer who queried the
+> `players` table directly via the Supabase REST API with their own session could still read
+> those columns, since the RLS policy itself is unchanged; closing that gap fully would require
+> routing every read through an `is_admin()`-aware view, which wasn't done here since the
+> `players` table is queried from many other places that don't need email/phone at all.
 
 ## Database design
 
@@ -324,6 +349,9 @@ What the Calendar page shows, given the above:
 - **Click a day / list row** — opens the same dialog to create, edit, or cancel. Past days are
   not clickable, and the date field's `min` blocks picking a past date (both client-side and
   re-checked in the Server Action).
+- **Send email reminder (admin only)** — a mail icon on each Upcoming Sessions row (Calendar
+  page and Dashboard) emails the roster via Gmail SMTP; disabled with a tooltip if nobody on the
+  roster has an email on file.
 
 The same due-session check also runs from the Game Days page and the Dashboard, so a session
 gets promoted from whichever page the next visitor happens to load first.
@@ -378,6 +406,7 @@ behind `proxy.ts`.
 |---|---|---|
 | `createScheduledSession` / `updateScheduledSession` | any user | Plan or edit a future session; Zod rejects a `session_date` earlier than "today" in the club's timezone. |
 | `deleteScheduledSession` | any user | Cancels a planned session outright. |
+| `sendScheduleReminder` | admin | Emails everyone on a scheduled session's roster with an email on file, via Gmail SMTP. Sends individually (`Promise.allSettled`, not one email to everyone) so one bad address doesn't block the rest and no player sees another's address. |
 
 **Statistics** — `src/app/(app)/statistics/actions.ts`
 
@@ -400,13 +429,13 @@ behind `proxy.ts`.
 - `src/proxy.ts` — runs on every request; not callable, but the single authorization
   checkpoint (see [Request & auth flow](#request--auth-flow)).
 - Supabase Edge Functions — separate deployable HTTP endpoints, called only by the iOS app:
-  `POST …/functions/v1/stats-assistant` and `POST …/functions/v1/clear-password-flag`. See
-  [External systems](#external-systems).
+  `POST …/functions/v1/stats-assistant`, `POST …/functions/v1/clear-password-flag`, and
+  `POST …/functions/v1/send-reminder`. See [External systems](#external-systems).
 
 ## Environment variables
 
-Four variables total, defined in `.env.example` and set locally in `.env.local` (gitignored).
-The same four are set again in Vercel's dashboard for production/preview deployments.
+Seven variables total, defined in `.env.example` and set locally in `.env.local` (gitignored).
+The same seven are set again in Vercel's dashboard for production/preview deployments.
 
 | Variable | Exposure | Used by | Purpose |
 |---|---|---|---|
@@ -414,10 +443,24 @@ The same four are set again in Vercel's dashboard for production/preview deploym
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | public (client bundle) | same as above | Anon key — safe to expose; every access it grants is still bounded by Row-Level Security. |
 | `SUPABASE_SERVICE_ROLE_KEY` | server-only | `lib/supabase/admin.ts` (guarded by the `server-only` import, which hard-errors at build time if ever imported from client code) | Bypasses RLS entirely — powers Admin's user management (create/reset/delete Auth users) and clearing `must_change_password`. |
 | `ANTHROPIC_API_KEY` | server-only | `statistics/actions.ts` (and separately, as a Supabase secret, by the `stats-assistant` Edge Function) | Authenticates calls to the Anthropic Claude API for the Stats Assistant. |
+| `GMAIL_USER` | server-only | `schedule/actions.ts`'s `sendScheduleReminder` (and separately, as a Supabase secret, by the `send-reminder` Edge Function) | The Gmail address reminder emails are sent from. |
+| `GMAIL_APP_PASSWORD` | server-only | same | A Google **App Password** (not the account's normal password — requires 2-Step Verification enabled, generated at `myaccount.google.com/apppasswords`). Authenticates the SMTP connection. |
+| `GMAIL_FROM_NAME` | server-only | same | Optional display name for the sender (e.g. `Pickleball Manager <address@gmail.com>`); falls back to just the bare address if unset. |
 
 Missing `ANTHROPIC_API_KEY` or `SUPABASE_SERVICE_ROLE_KEY` doesn't crash the app — both call
 sites catch the failure and surface a specific, actionable error message ("an admin needs to
-add …") instead.
+add …") instead. Missing `GMAIL_USER`/`GMAIL_APP_PASSWORD` behaves the same way.
+
+> **Why Gmail SMTP instead of a transactional email API.** The reminder feature was originally
+> built against Resend. Resend (like SendGrid, Postmark, Mailgun, etc.) requires *owning and
+> DNS-verifying a sending domain* before it will deliver to arbitrary recipients — until then, it
+> silently accepts the API call (so the app's "sent" toast still appears) but the email never
+> actually reaches anyone outside the account owner's own address, which only surfaces in the
+> provider's own dashboard, not in this app. Since the club didn't have a domain to verify,
+> Gmail SMTP (via `nodemailer`) replaced Resend entirely: it works immediately with an existing
+> Gmail account and costs nothing, at the cost of Gmail's own sending ceiling (~500 emails/day
+> on a regular account) — far more than a club roster needs. The `resend` package has been fully
+> removed; nothing in the codebase references it anymore.
 
 ## Supabase configuration
 
@@ -463,18 +506,22 @@ directly from the public URL with no signed-URL dance), but only admins can
 |---|---|---|
 | `stats-assistant` | `statistics/actions.ts`'s `askStatsQuestion` — same prompt, dataset shape, model, JSON schema | `supabase functions deploy stats-assistant`, then `supabase secrets set ANTHROPIC_API_KEY=…` |
 | `clear-password-flag` | `lib/actions/auth.ts`'s post-password-change cleanup | `supabase functions deploy clear-password-flag` (service-role key is already available to Edge Functions automatically) |
+| `send-reminder` | `schedule/actions.ts`'s `sendScheduleReminder` — same recipient selection, per-recipient send strategy, and email copy | `supabase functions deploy send-reminder`, then `supabase secrets set GMAIL_USER=… GMAIL_APP_PASSWORD=…` (and optionally `GMAIL_FROM_NAME=…`) |
 
-Both verify the caller's JWT (an Edge Function default) before doing anything — the mobile
-client authenticates as the signed-in user, never as service-role.
+All three verify the caller's JWT (an Edge Function default) before doing anything — the mobile
+client authenticates as the signed-in user, never as service-role. `send-reminder` additionally
+checks `app_metadata.role === "admin"` before sending, matching the web app's admin-only gate.
 
 ## Vercel configuration
 
 - **Deploy trigger:** Vercel's GitHub integration auto-builds and deploys on every push to
   `main` (and preview-deploys other branches/PRs) — there's no `vercel.json` in the repo; all
   settings live in the Vercel project dashboard.
-- **Environment variables:** the same four from [above](#environment-variables), added under
+- **Environment variables:** the same seven from [above](#environment-variables), added under
   **Project Settings → Environment Variables** for Production (and Preview, if you want preview
-  deploys to work against the same or a staging Supabase project).
+  deploys to work against the same or a staging Supabase project). The three Gmail variables in
+  particular are easy to forget when deploying this feature for the first time — without them,
+  the live site shows the "not configured" error when an admin clicks Send Reminder.
 - **Build:** standard Next.js build (`next build`) — no custom build command needed.
   `tsconfig.json` excludes `supabase/functions` from the TypeScript project, since those run on
   Deno, not Node, and would otherwise fail the build's type check.
@@ -495,19 +542,32 @@ prior chat turns, to `claude-opus-4-8` with `output_config.format = json_schema`
 is guaranteed `{ answer, in_scope, table }` rather than free-form prose that would need fragile
 parsing.
 
+**Gmail SMTP**
+
+Powers the admin-only "Send email reminder" button on the Calendar page's Upcoming Sessions
+list. `schedule/actions.ts`'s `sendScheduleReminder()` opens an SMTP connection via
+`nodemailer.createTransport({ service: "gmail", auth: { user: GMAIL_USER, pass:
+GMAIL_APP_PASSWORD } })`, then sends one email per recipient (not a single email to the whole
+roster) with `Promise.allSettled`, so a single bad or missing address can't block the reminder
+from reaching everyone else, and no player's address is visible to any other player. See the
+[Environment variables](#environment-variables) section above for why this replaced an earlier
+Resend integration.
+
 **Companion iOS app**
 
 A separate codebase (not in this repository) that reads/writes the *same* Supabase project —
-same tables, same RLS policies, same Auth users. It can't safely embed `ANTHROPIC_API_KEY` or
-`SUPABASE_SERVICE_ROLE_KEY` inside a distributed app binary, so for the two operations that need
-one of those secrets, it calls the `stats-assistant` and `clear-password-flag` Edge Functions
-instead — each one holds the relevant secret server-side and verifies the caller's own JWT
-before acting.
+same tables, same RLS policies, same Auth users. It can't safely embed `ANTHROPIC_API_KEY`,
+`SUPABASE_SERVICE_ROLE_KEY`, or `GMAIL_APP_PASSWORD` inside a distributed app binary, so for the
+three operations that need one of those secrets, it calls the `stats-assistant`,
+`clear-password-flag`, and `send-reminder` Edge Functions instead — each one holds the relevant
+secret server-side and verifies the caller's own JWT before acting. The iOS "Send Reminder"
+button (`ScheduleReminderService.swift`, wired up in `ScheduledSessionsListView.swift`) calls
+`send-reminder` the same way the web Calendar page's reminder button calls
+`sendScheduleReminder()` directly.
 
-> The `supabase/functions/` directory is **not tracked by this repository's git history** —
-> it's present on disk but excluded from version control here, since it belongs to the iOS
-> app's own release process. It's documented above only because it's part of the same running
-> system and explains two files that would otherwise look orphaned.
+> `supabase/functions/` is tracked in this repository's git history alongside the rest of the
+> app, even though the Edge Functions only run for the iOS client — it's the one place this
+> code is version-controlled at all, since the iOS codebase itself isn't a git repo.
 
 ## Source file reference
 
@@ -523,9 +583,9 @@ Every file under `src/` and `supabase/`, grouped by directory.
 | `change-password/page.tsx` | Forced password-reset screen shown when `must_change_password` is set; calls `updateOwnPassword()`. |
 | `(app)/layout.tsx` | Shared layout for every page behind auth: fetches the current user/role once, renders `<Nav>`, centers page content in a max-width column. |
 | `(app)/page.tsx` | Dashboard: player count, Game Days/Calendar/Statistics quick-link cards, Upcoming Sessions, Top Players/Teams, a horizontally-scrolling Recent Game Days list. |
-| `(app)/players/page.tsx` | Players grid. |
+| `(app)/players/page.tsx` | Players grid; redacts `email`/`phone` to `null` for non-admins before rendering. |
 | `(app)/players/actions.ts` | Server Actions: `createPlayer`, `updatePlayer`, `deletePlayer`. |
-| `(app)/players/[id]/page.tsx` | Player profile: overall record, per-partner win/loss breakdown, full match history. |
+| `(app)/players/[id]/page.tsx` | Player profile: overall record, per-partner win/loss breakdown, full match history; redacts `email`/`phone` for non-admins. |
 | `(app)/venues/page.tsx` | Venues grid. |
 | `(app)/venues/actions.ts` | Server Actions: `createVenue`, `updateVenue`, `deleteVenue`. |
 | `(app)/game-days/page.tsx` | Game Days list; runs `autoEndIfExpired` and `autoPromoteDueScheduledSessions` on load. |
@@ -533,7 +593,7 @@ Every file under `src/` and `supabase/`, grouped by directory.
 | `(app)/game-days/[id]/page.tsx` | Single Game Day: roster panel + Order-of-Play match cards. |
 | `(app)/game-days/[id]/actions.ts` | Server Actions: roster add/remove/add-all, register-and-add, `generateSchedule`, `startMatch`, `endMatch`, `endGameDay`, `deleteGameDay`. |
 | `(app)/schedule/page.tsx` | Calendar page: month grid + Upcoming Sessions list; runs auto-promotion on load. |
-| `(app)/schedule/actions.ts` | Server Actions: `createScheduledSession`, `updateScheduledSession`, `deleteScheduledSession`. |
+| `(app)/schedule/actions.ts` | Server Actions: `createScheduledSession`, `updateScheduledSession`, `deleteScheduledSession`, `sendScheduleReminder` (Gmail SMTP). |
 | `(app)/statistics/page.tsx` | Club-wide statistics: Stats Assistant, win/loss chart, team-pairings table, Game Day history, games-per-venue chart. |
 | `(app)/statistics/actions.ts` | Server Action: `askStatsQuestion` (the Claude API call). |
 | `(app)/statistics/[gameDayId]/page.tsx` | Per-Game-Day statistics drill-down. |
@@ -577,6 +637,7 @@ Every file under `src/` and `supabase/`, grouped by directory.
 | `schedule/scheduled-session-dialog.tsx` | Create/edit dialog for a scheduled session (date, time, venue, players, "Add All Players"). |
 | `schedule/scheduled-sessions-list.tsx` | Upcoming-sessions list, reused on both the Calendar page and the Dashboard. |
 | `schedule/delete-scheduled-session-button.tsx` | Confirm-and-cancel-session icon button, inline in the list. |
+| `schedule/send-reminder-button.tsx` | Confirm-and-send-reminder icon button (admin only), inline in the Upcoming Sessions list; disabled when nobody on the roster has an email on file. |
 | `players/player-card.tsx` | Player grid card: photo, contact info, W/L record, admin edit/delete. |
 | `players/player-dialog.tsx` | Create/edit player dialog, including client-side photo resize/re-encode before upload. |
 | `venues/venue-card.tsx` | Venue grid card with admin edit/delete. |
@@ -596,8 +657,9 @@ Every file under `src/` and `supabase/`, grouped by directory.
 | File | What it does |
 |---|---|
 | `schema.sql` | The entire DB schema — tables, indexes, RLS policies, `is_admin()`, statistics views, storage bucket + policies. Hand-run in the SQL Editor; idempotent. |
-| `functions/stats-assistant/index.ts` | Edge Function used by the iOS app to reach Claude (mirrors `statistics/actions.ts`). Not tracked by this repo's git history. |
-| `functions/clear-password-flag/index.ts` | Edge Function used by the iOS app after a self-service password change. Not tracked by this repo's git history. |
+| `functions/stats-assistant/index.ts` | Edge Function used by the iOS app to reach Claude (mirrors `statistics/actions.ts`). |
+| `functions/clear-password-flag/index.ts` | Edge Function used by the iOS app after a self-service password change. |
+| `functions/send-reminder/index.ts` | Edge Function used by the iOS app's Send Reminder button (mirrors `schedule/actions.ts`'s `sendScheduleReminder`). |
 
 ## Testing & tooling
 
