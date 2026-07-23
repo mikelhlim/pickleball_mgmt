@@ -8,6 +8,7 @@ import { getCurrentRole } from "@/lib/auth-role";
 import { RosterPanel } from "@/components/game-days/roster-panel";
 import { MatchCard } from "@/components/game-days/match-card";
 import { EndGameDayDialog } from "@/components/game-days/end-game-day-dialog";
+import { AdHocMatchDialog } from "@/components/game-days/ad-hoc-match-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatHoursMinutesBetween, formatTimeOfDay } from "@/lib/format";
@@ -56,6 +57,8 @@ export default async function GameDayDetailPage({
   // only deleting/ending a game day outright stays admin-only (isAdmin,
   // used below for EndGameDayDialog).
   const canEditRoster = gameDay.status !== "completed" && matchList.every((m) => m.status === "pending");
+  const canDeleteMatch = gameDay.status === "completed" && isAdmin;
+  const canCancelMatch = gameDay.status === "in_progress" && isAdmin;
 
   return (
     <div className="space-y-6">
@@ -90,6 +93,9 @@ export default async function GameDayDetailPage({
           </p>
         </div>
         <div className="flex items-center gap-3">
+          {gameDay.status === "in_progress" && isAdmin && (
+            <AdHocMatchDialog gameDayId={id} roster={roster} />
+          )}
           {gameDay.status === "in_progress" && isAdmin && <EndGameDayDialog gameDayId={id} />}
           {gameDay.status === "completed" && (
             <Button
@@ -156,6 +162,8 @@ export default async function GameDayDetailPage({
                   sittingOut={sittingOut}
                   locked={gameDay.status === "completed"}
                   canManageMatch
+                  canDelete={canDeleteMatch}
+                  canCancel={canCancelMatch}
                 />
               );
             })}

@@ -4,6 +4,8 @@ import { useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Play, Trophy } from "lucide-react";
 import { endMatch, startMatch } from "@/app/(app)/game-days/[id]/actions";
+import { CancelMatchButton } from "./cancel-match-button";
+import { DeleteMatchButton } from "./delete-match-button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -65,6 +67,8 @@ export function MatchCard({
   sittingOut,
   locked = false,
   canManageMatch = false,
+  canDelete = false,
+  canCancel = false,
 }: {
   match: Match;
   gameDayId: string;
@@ -73,6 +77,8 @@ export function MatchCard({
   sittingOut: Player[];
   locked?: boolean;
   canManageMatch?: boolean;
+  canDelete?: boolean;
+  canCancel?: boolean;
 }) {
   const [isPending, startTransition] = useTransition();
   const [endDialogOpen, setEndDialogOpen] = useState(false);
@@ -141,16 +147,32 @@ export function MatchCard({
     >
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <span className="text-sm font-semibold text-muted-foreground">Match {match.match_number}</span>
-        {match.status === "pending" && !isCancelled && <Badge variant="outline">Pending</Badge>}
-        {match.status === "in_progress" && (
-          <Badge className="bg-chart-4 tabular-nums text-white">Live · {formatDuration(elapsed)}</Badge>
-        )}
-        {match.status === "completed" && (
-          <Badge variant="secondary">
-            Completed · {match.duration_seconds != null ? formatDuration(match.duration_seconds) : "—"}
-          </Badge>
-        )}
-        {isCancelled && <Badge variant="outline">Cancelled</Badge>}
+        <div className="flex items-center gap-1">
+          {canDelete && (
+            <DeleteMatchButton
+              matchId={match.id}
+              gameDayId={gameDayId}
+              label={`Match ${match.match_number}`}
+            />
+          )}
+          {canCancel && (match.status === "pending" || match.status === "in_progress") && (
+            <CancelMatchButton
+              matchId={match.id}
+              gameDayId={gameDayId}
+              label={`Match ${match.match_number}`}
+            />
+          )}
+          {match.status === "pending" && !isCancelled && <Badge variant="outline">Pending</Badge>}
+          {match.status === "in_progress" && (
+            <Badge className="bg-chart-4 tabular-nums text-white">Live · {formatDuration(elapsed)}</Badge>
+          )}
+          {match.status === "completed" && (
+            <Badge variant="secondary">
+              Completed · {match.duration_seconds != null ? formatDuration(match.duration_seconds) : "—"}
+            </Badge>
+          )}
+          {isCancelled && <Badge variant="outline">Cancelled</Badge>}
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
@@ -194,11 +216,7 @@ export function MatchCard({
           </p>
         )}
 
-        {isCancelled && (
-          <p className="text-sm text-muted-foreground">
-            Not played — the game day ended before this match started.
-          </p>
-        )}
+        {isCancelled && <p className="text-sm text-muted-foreground">Not played — this match was cancelled.</p>}
 
         {match.status === "pending" && !locked && canManageMatch && (
           <Button onClick={handleStart} disabled={isPending} className="w-full">
